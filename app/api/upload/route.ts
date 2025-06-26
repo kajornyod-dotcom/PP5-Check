@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as XLSX from 'xlsx'
 
 export async function POST(request: NextRequest) {
     try {
@@ -16,43 +17,80 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Get backend URL from environment variable
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
-
-        if (!backendUrl) {
-            return NextResponse.json(
-                { error: 'Backend URL not configured' },
-                { status: 500 }
-            )
-        }
-
-        // Create FormData to send to backend
-        const formData = new FormData()
-        formData.append('academicYear', academicYear)
-        formData.append('semester', semester)
-        formData.append('file_xlsx', xlsxFile)
+        console.log('=== ข้อมูลที่ได้รับ ===')
+        console.log('ปีการศึกษา:', academicYear)
+        console.log('ภาคเรียน:', semester)
+        console.log('ไฟล์ Excel:', xlsxFile.name, `(${(xlsxFile.size / 1024 / 1024).toFixed(2)} MB)`)
         if (pdfFile) {
-            formData.append('file_pdf', pdfFile)
+            console.log('ไฟล์ PDF:', pdfFile.name, `(${(pdfFile.size / 1024 / 1024).toFixed(2)} MB)`)
         }
 
-        // Send data to backend
-        const response = await fetch(backendUrl, {
-            method: 'POST',
-            body: formData,
-        })
+        // อ่านไฟล์ Excel
+        const arrayBuffer = await xlsxFile.arrayBuffer()
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
+        console.log('\n=== รายชื่อชีท ===')
+        console.log('ชีทที่มี:', workbook.SheetNames)
+
+        // ตรวจสอบว่ามีชีท "check" หรือไม่
+        if (workbook.SheetNames.includes('check')) {
+            console.log('\n=== ข้อมูลจากชีท "check" ===')
+            const worksheet = workbook.Sheets['check']
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+
+            console.log('จำนวนแถว:', jsonData.length)
+            console.log('ข้อมูลดิบจากชีท "check":')
+            console.log(JSON.stringify(jsonData, null, 2))
+
+            // แปลงข้อมูลให้อยู่ในรูป Object
+            const convertedData: { [key: string]: any } = {}
+
+            // กรองแถวที่มีข้อมูล (ไม่ใช่แถวว่าง)
+            const validRows = jsonData.filter((row: any) =>
+                Array.isArray(row) && row.length >= 2 &&
+                row[0] !== undefined && row[0] !== '' &&
+                row[0] !== 'list' // ข้าม header row
+            )
+
+            // แปลงจาก [key, value] เป็น object
+            validRows.forEach((row: any) => {
+                if (Array.isArray(row) && row.length >= 2) {
+                    const key = row[0]
+                    const value = row[1]
+                    convertedData[key] = value
+                }
+            })
+
+        
+            // แสดงข้อมูลแต่ละแถวแยกกัน
+            console.log('\n=== รายละเอียดแต่ละแถว ===')
+            validRows.forEach((row: any, index: number) => {
+                if (Array.isArray(row) && row.length >= 2) {
+                    console.log(`แถว ${index + 1}:`, `${row[0]} = ${row[1]}`)
+                }
+            })
+
+    
+        } else {
+            console.log('\n❌ ไม่พบชีท "check" ในไฟล์ Excel')
+            console.log('ชีทที่มี:', workbook.SheetNames)
         }
 
-        const result = await response.json()
-        console.log(result)
+        // บันทึกข้อมูลลงฐานข้อมูล (ถ้าต้องการ)
+        // TODO: บันทึกข้อมูลลง MongoDB ผ่าน Prisma
 
         return NextResponse.json({
             success: true,
-            message: 'Data sent to backend successfully',
-            data: result
+            message: 'ประมวลผลไฟล์สำเร็จ',
+            data: {
+                academicYear,
+                semester,
+                fileName: xlsxFile.name,
+                fileSize: xlsxFile.size,
+                pdfFileName: pdfFile?.name || null,
+                sheetsFound: workbook.SheetNames,
+                hasCheckSheet: workbook.SheetNames.includes('check')
+            }
         })
 
     } catch (error) {

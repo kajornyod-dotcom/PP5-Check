@@ -318,21 +318,15 @@ export default function Home() {
         errorMessages = [
           'ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
           'ตรวจสอบว่าเซิร์ฟเวอร์กำลังทำงาน',
-          `URL: ${process.env.NEXT_PUBLIC_BACKEND_URL || 'ไม่ได้กำหนด'}`,
           'ติดต่อผู้ดูแลระบบหากปัญหายังคงอยู่'
         ]
       } else if (error instanceof Error) {
-        if (error.message.includes('Backend URL not configured')) {
-          // Error already handled above
-          return
-        } else {
-          errorMessages = [
-            `สาเหตุ: ${error.message}`,
-            'ตรวจสอบข้อมูลที่กรอกให้ถูกต้อง',
-            'ตรวจสอบขนาดไฟล์ไม่เกิน 10MB',
-            'ลองส่งข้อมูลอีกครั้งในภายหลัง'
-          ]
-        }
+        errorMessages = [
+          `สาเหตุ: ${error.message}`,
+          'ตรวจสอบข้อมูลที่กรอกให้ถูกต้อง',
+          'ตรวจสอบขนาดไฟล์ไม่เกิน 10MB',
+          'ลองส่งข้อมูลอีกครั้งในภายหลัง'
+        ]
       } else {
         errorMessages = [
           'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ',
