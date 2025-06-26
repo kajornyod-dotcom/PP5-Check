@@ -12,12 +12,28 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [showPanel, setShowPanel] = useState(true)
+  const [panelContent, setPanelContent] = useState({
+    type: 'info' as 'info' | 'error' | 'warning' | 'success',
+    title: 'คำแนะนำการใช้งาน',
+    messages: [
+      'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
+      'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
+      'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
+      'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
+    ]
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Generate academic years (10 years back from current year in Buddhist Era)
   const currentYear = new Date().getFullYear()
   const currentBuddhistYear = currentYear + 543
   const academicYears = Array.from({ length: 10 }, (_, i) => currentBuddhistYear - i)
+
+  const updatePanelContent = (type: 'info' | 'error' | 'warning' | 'success', title: string, messages: string[]) => {
+    setPanelContent({ type, title, messages })
+    setShowPanel(true)
+  }
 
   const handleFileChange = async (selectedFile: File | null) => {
     setError('')
@@ -37,6 +53,11 @@ export default function Home() {
     if (selectedFile.type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' && 
         !selectedFile.name.toLowerCase().endsWith('.xlsx')) {
       setError('กรุณาเลือกไฟล์ .xlsx เท่านั้น')
+      updatePanelContent('error', 'ข้อผิดพลาดในการเลือกไฟล์', [
+        'ไฟล์ที่เลือกไม่ใช่ไฟล์ Excel (.xlsx)',
+        'กรุณาเลือกไฟล์ที่มีนามสกุล .xlsx เท่านั้น',
+        'ตรวจสอบให้แน่ใจว่าไฟล์เป็น Excel ที่บันทึกในรูปแบบ .xlsx'
+      ])
       setFile(null)
       setIsUploading(false)
       return
@@ -45,6 +66,11 @@ export default function Home() {
     // Check file size (max 10MB)
     if (selectedFile.size > 10 * 1024 * 1024) {
       setError('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 10MB)')
+      updatePanelContent('error', 'ไฟล์มีขนาดใหญ่เกินไป', [
+        `ขนาดไฟล์ปัจจุบัน: ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
+        'ขนาดสูงสุดที่อนุญาต: 10 MB',
+        'กรุณาลดขนาดไฟล์หรือเลือกไฟล์อื่น'
+      ])
       setFile(null)
       setIsUploading(false)
       return
@@ -53,6 +79,12 @@ export default function Home() {
     setFile(selectedFile)
     setIsUploading(false)
     setSuccess(true)
+    updatePanelContent('success', 'ไฟล์ถูกเลือกเรียบร้อยแล้ว', [
+      `ชื่อไฟล์: ${selectedFile.name}`,
+      `ขนาดไฟล์: ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
+      'ไฟล์พร้อมสำหรับการส่งข้อมูล',
+      'กรอกปีการศึกษาและภาคเรียน แล้วกดส่งข้อมูล'
+    ])
     
     // Auto-hide success message
     setTimeout(() => setSuccess(false), 3000)
@@ -85,6 +117,12 @@ export default function Home() {
     
     if (!academicYear || !semester || !file) {
       setError('กรุณากรอกข้อมูลให้ครบทุกช่อง')
+      updatePanelContent('warning', 'ข้อมูลไม่ครบถ้วน', [
+        !academicYear ? '❌ ยังไม่ได้เลือกปีการศึกษา' : '✅ เลือกปีการศึกษาแล้ว',
+        !semester ? '❌ ยังไม่ได้เลือกภาคเรียน' : '✅ เลือกภาคเรียนแล้ว',
+        !file ? '❌ ยังไม่ได้เลือกไฟล์' : '✅ เลือกไฟล์แล้ว',
+        'กรุณากรอกข้อมูลให้ครบถ้วนก่อนส่ง'
+      ])
       return
     }
 
@@ -92,27 +130,58 @@ export default function Home() {
     setError('')
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Create FormData object for file upload
+      const formData = new FormData()
+      formData.append('academicYear', academicYear)
+      formData.append('semester', semester)
+      formData.append('file_xlsx', file)
 
-      // Here you would typically send the data to your backend
-      console.log({
-        academicYear,
-        semester,
-        file: file.name
+      // Get backend URL from environment variable
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+
+      if (!backendUrl) {
+        throw new Error('Backend URL not configured')
+      }
+
+      // Send POST request to backend
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        body: formData,
       })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('Upload successful:', result)
       
       // Reset form on success
       setAcademicYear('')
       setSemester('')
       setFile(null)
       setSuccess(true)
+      updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
+        'ไฟล์ ปพ.5 ถูกส่งเรียบร้อยแล้ว',
+        'ระบบกำลังประมวลผลข้อมูล',
+        'ผลการตรวจสอบจะปรากฏในภายหลัง',
+        'ขอบคุณที่ใช้บริการ'
+      ])
       
       // Show success message
       setTimeout(() => setSuccess(false), 5000)
       
     } catch (error) {
-      setError('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองอีกครั้ง')
+      console.error('Upload error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการส่งข้อมูล'
+      setError(`ข้อผิดพลาด: ${errorMessage}`)
+      updatePanelContent('error', 'เกิดข้อผิดพลาดในการส่งข้อมูล', [
+        `สาเหตุ: ${errorMessage}`,
+        'ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
+        'ตรวจสอบว่า backend server กำลังทำงาน',
+        'ลองส่งข้อมูลอีกครั้งในภายหลัง'
+      ])
     } finally {
       setIsLoading(false)
     }
@@ -120,27 +189,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-5 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="text-center mb-7">
-          <div className="flex justify-center mb-3">
-            <div className="p-1.5 bg-white rounded-xl shadow-md">
-              <Image
-                src="/logo-ppk-512x512-1.png"
-                alt="PPK Logo"
-                width={50}
-                height={50}
-                priority
-                className="rounded-lg"
-              />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
-            ส่งไฟล์ ปพ.5
-          </h1>
-          <p className="text-slate-600">อัปโหลดไฟล์เพื่อตรวจสอบข้อมูล</p>
-          <div className="w-16 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
-        </div>
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Form Section */}
+          <div className="lg:col-span-2">
+            <div className="max-w-lg mx-auto lg:mx-0">
+              {/* Header */}
+              <div className="text-center mb-7">
+                <div className="flex justify-center mb-3">
+                  <div className="p-1.5 bg-white rounded-xl shadow-md">
+                    <Image
+                      src="/logo-ppk-512x512-1.png"
+                      alt="PPK Logo"
+                      width={50}
+                      height={50}
+                      priority
+                      className="rounded-lg"
+                    />
+                  </div>
+                </div>
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                  ส่งไฟล์ ปพ.5
+                </h1>
+                <p className="text-slate-600">อัปโหลดไฟล์เพื่อตรวจสอบข้อมูล</p>
+                <div className="w-16 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+              </div>
 
         {/* Form Card */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-5">
@@ -337,5 +410,102 @@ export default function Home() {
         </div>
       </div>
     </div>
+
+    {/* Side Panel */}
+    <div className="lg:col-span-1">
+      <div className="sticky top-5">
+        {/* Panel Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-slate-800">ข้อมูลและคำแนะนำ</h2>
+          <button
+            onClick={() => setShowPanel(!showPanel)}
+            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+          >
+            <svg className={`w-5 h-5 transform transition-transform ${showPanel ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Panel Content */}
+        {showPanel && (
+          <div className={`bg-white rounded-xl shadow-lg border-2 p-5 ${
+            panelContent.type === 'error' ? 'border-red-200 bg-red-50' :
+            panelContent.type === 'warning' ? 'border-yellow-200 bg-yellow-50' :
+            panelContent.type === 'success' ? 'border-green-200 bg-green-50' :
+            'border-blue-200 bg-blue-50'
+          }`}>
+            {/* Panel Icon and Title */}
+            <div className="flex items-center mb-4">
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                panelContent.type === 'error' ? 'bg-red-100' :
+                panelContent.type === 'warning' ? 'bg-yellow-100' :
+                panelContent.type === 'success' ? 'bg-green-100' :
+                'bg-blue-100'
+              }`}>
+                {panelContent.type === 'error' && (
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                {panelContent.type === 'warning' && (
+                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                )}
+                {panelContent.type === 'success' && (
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                {panelContent.type === 'info' && (
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <h3 className={`ml-3 font-semibold ${
+                panelContent.type === 'error' ? 'text-red-800' :
+                panelContent.type === 'warning' ? 'text-yellow-800' :
+                panelContent.type === 'success' ? 'text-green-800' :
+                'text-blue-800'
+              }`}>
+                {panelContent.title}
+              </h3>
+            </div>
+
+            {/* Panel Messages */}
+            <div className="space-y-2">
+              {panelContent.messages.map((message, index) => (
+                <div key={index} className={`flex items-start space-x-2 text-sm ${
+                  panelContent.type === 'error' ? 'text-red-700' :
+                  panelContent.type === 'warning' ? 'text-yellow-700' :
+                  panelContent.type === 'success' ? 'text-green-700' :
+                  'text-blue-700'
+                }`}>
+                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current mt-2"></div>
+                  <span>{message}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            {panelContent.type === 'info' && (
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                <div className="text-xs text-blue-600 font-medium mb-2">การตรวจสอบไฟล์</div>
+                <div className="space-y-1 text-xs text-blue-700">
+                  <div>✓ รูปแบบไฟล์: .xlsx เท่านั้น</div>
+                  <div>✓ ขนาดไฟล์: สูงสุด 10 MB</div>
+                  <div>✓ เนื้อหา: ข้อมูล ปพ.5</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+</div>
   )
 }
