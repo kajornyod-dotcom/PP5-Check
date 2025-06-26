@@ -18,10 +18,8 @@ model PpkPp5Submit {
     semester     String
     xlsxFileName String
     xlsxFileSize Int
-    xlsxFilePath String
     pdfFileName  String?
     pdfFileSize  Int?
-    pdfFilePath  String?
     status       SubmissionStatus @default(PENDING)
     submittedAt  DateTime         @default(now())
     updatedAt    DateTime         @updatedAt
@@ -29,6 +27,9 @@ model PpkPp5Submit {
     // เพิ่มฟิลด์สำหรับเก็บผลการประมวลผล
     processedAt  DateTime?
     errorMessage String?
+
+    // เพิ่มฟิลด์สำหรับเก็บ response จาก microservice
+    backendResponse Json?
 
     // เพิ่มฟิลด์สำหรับเก็บข้อมูลเพิ่มเติม
     submitterIp String?
