@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mongodb"
+    url      = env("DATABASE_URL")
+}
+
+model PpkPp5Submit {
+    id           String           @id @default(auto()) @map("_id") @db.ObjectId
+    uuid         String           @unique @default(uuid())
+    uploaderName String
+    academicYear String
+    semester     String
+    xlsxFileName String
+    xlsxFileSize Int
+    xlsxFilePath String
+    pdfFileName  String?
+    pdfFileSize  Int?
+    pdfFilePath  String?
+    status       SubmissionStatus @default(PENDING)
+    submittedAt  DateTime         @default(now())
+    updatedAt    DateTime         @updatedAt
+
+    // เพิ่มฟิลด์สำหรับเก็บผลการประมวลผล
+    processedAt  DateTime?
+    errorMessage String?
+
+    // เพิ่มฟิลด์สำหรับเก็บข้อมูลเพิ่มเติม
+    submitterIp String?
+    userAgent   String?
+
+    @@map("ppk_pp5_submit")
+}
+
+enum SubmissionStatus {
+    PENDING // รอการประมวลผล
+    PROCESSING // กำลังประมวลผล
+    COMPLETED // เสร็จสิ้น
+    FAILED // ล้มเหลว
+}
