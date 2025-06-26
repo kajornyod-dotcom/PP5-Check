@@ -209,8 +209,20 @@ export async function POST(request: NextRequest) {
 
         // สร้าง PDF รายงาน
         let doc: any
+
+        // กำหนด path ของ font ก่อนสร้าง document
+        const fontPath = path.join(process.cwd(), 'public', 'fonts', 'THSarabun.ttf')
+        const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'THSarabun Bold.ttf')
+
         try {
+            // สร้าง PDF แบบง่ายที่สุดเพื่อหลีกเลี่ยงปัญหา font
             doc = new PDFDocument({
+                bufferPages: true,
+                autoFirstPage: false // ไม่สร้างหน้าแรกอัตโนมัติ
+            })
+
+            // สร้างหน้าแรกด้วยตัวเอง
+            doc.addPage({
                 size: 'A4',
                 margins: {
                     top: 50,
@@ -219,18 +231,8 @@ export async function POST(request: NextRequest) {
                     right: 50
                 }
             })
-        } catch (error) {
-            console.log('PDFKit initialization error, trying alternative approach:', error)
-            // ถ้าเกิดข้อผิดพลาดให้ใช้การตั้งค่าแบบง่าย
-            doc = new PDFDocument()
-        }
 
-        // กำหนด path ของ font
-        const fontPath = path.join(process.cwd(), 'public', 'fonts', 'THSarabun.ttf')
-        const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'THSarabun Bold.ttf')
-
-        try {
-            // ตรวจสอบว่าไฟล์ font มีอยู่หรือไม่
+            // ลงทะเบียน font หลังจากสร้าง document แล้ว
             if (fs.existsSync(fontPath)) {
                 doc.registerFont('THSarabun', fontPath)
                 console.log('✅ ลงทะเบียน THSarabun font สำเร็จ')
@@ -239,20 +241,30 @@ export async function POST(request: NextRequest) {
                 doc.registerFont('THSarabunBold', fontBoldPath)
                 console.log('✅ ลงทะเบียน THSarabun Bold font สำเร็จ')
             }
-        } catch (fontError) {
-            console.error('⚠️ ไม่สามารถลงทะเบียน font ได้:', fontError)
-            console.log('ใช้ default font แทน')
+
+        } catch (error) {
+            console.log('PDFKit initialization error:', error)
+            // สร้าง PDF แบบพื้นฐานที่สุด
+            try {
+                doc = new PDFDocument()
+                console.log('✅ สร้าง PDF ด้วยการตั้งค่าพื้นฐาน')
+            } catch (fallbackError) {
+                console.error('❌ ไม่สามารถสร้าง PDF ได้:', fallbackError)
+                throw new Error('ไม่สามารถสร้าง PDF ได้')
+            }
         }
 
         // สร้าง buffer สำหรับเก็บ PDF
         const buffers: Buffer[] = []
-        doc.on('data', buffers.push.bind(buffers))        // หัวเอกสาร
+        doc.on('data', buffers.push.bind(buffers))
+
+        // หัวเอกสาร
         try {
-            doc.font('THSarabun')
+            doc.font('THSarabunBold')
         } catch (error) {
             console.log('Font setting error, using default font:', error)
             try {
-                doc.font('THSarabunBold')
+                doc.font('THSarabun')
             } catch (fallbackError) {
                 console.log('THSarabun font not available, using default')
             }
