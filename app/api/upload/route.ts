@@ -38,10 +38,6 @@ export async function POST(request: NextRequest) {
             const worksheet = workbook.Sheets['check']
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
-            console.log('จำนวนแถว:', jsonData.length)
-            console.log('ข้อมูลดิบจากชีท "check":')
-            console.log(JSON.stringify(jsonData, null, 2))
-
             // แปลงข้อมูลให้อยู่ในรูป Object
             const convertedData: { [key: string]: any } = {}
 
@@ -61,14 +57,7 @@ export async function POST(request: NextRequest) {
                 }
             })
 
-        
-            // แสดงข้อมูลแต่ละแถวแยกกัน
-            console.log('\n=== รายละเอียดแต่ละแถว ===')
-            validRows.forEach((row: any, index: number) => {
-                if (Array.isArray(row) && row.length >= 2) {
-                    console.log(`แถว ${index + 1}:`, `${row[0]} = ${row[1]}`)
-                }
-            })
+            console.log(convertedData);
 
     
         } else {
