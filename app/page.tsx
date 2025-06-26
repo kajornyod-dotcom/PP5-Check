@@ -216,13 +216,18 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Reset states at the beginning of submission
+    setError('')
+    setSuccess(false)
+
     if (!academicYear || !semester || !file) {
-      setError('กรุณากรอกข้อมูลให้ครบถ้วน')
-      updatePanelContent('error', 'ข้อมูลไม่ครบถ้วน', [
-        'กรุณาเลือกปีการศึกษา',
-        'กรุณาเลือกภาคเรียน',
-        'กรุณาเลือกไฟล์ Excel (.xlsx)',
-        'ตรวจสอบข้อมูลและลองอีกครั้ง'
+      setError('กรุณากรอกข้อมูลให้ครบทุกช่อง')
+      updatePanelContent('warning', 'ข้อมูลไม่ครบถ้วน', [
+        !academicYear ? '❌ ยังไม่ได้เลือกปีการศึกษา' : '✅ เลือกปีการศึกษาแล้ว',
+        !semester ? '❌ ยังไม่ได้เลือกภาคเรียน' : '✅ เลือกภาคเรียนแล้ว',
+        !file ? '❌ ยังไม่ได้เลือกไฟล์ Excel' : '✅ เลือกไฟล์ Excel แล้ว',
+        pdfFile ? '✅ เลือกไฟล์ PDF รายงาน SGS แล้ว' : '⚠️  ไฟล์ PDF รายงาน SGS (ไม่บังคับ)',
+        'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วนก่อนส่ง'
       ])
       return
     }
@@ -231,24 +236,17 @@ export default function Home() {
     setError('')
 
     try {
-      // Create FormData
+      // Create FormData object for file upload
       const formData = new FormData()
       formData.append('academicYear', academicYear)
       formData.append('semester', semester)
       formData.append('file_xlsx', file)
-
       if (pdfFile) {
         formData.append('file_pdf', pdfFile)
       }
 
+      // Get backend URL from environment variable
       const backendUrl = '/api/upload'
-
-      updatePanelContent('info', 'กำลังประมวลผล...', [
-        'กำลังส่งไฟล์ไปยังเซิร์ฟเวอร์',
-        'กำลังอ่านข้อมูลจากไฟล์ Excel',
-        pdfFile ? 'กำลังประมวลผล PDF ด้วย Gemini AI' : '',
-        'กำลังสร้างรายงาน PDF...'
-      ].filter(Boolean))
 
       // Send POST request to local API
       const response = await fetch(backendUrl, {
@@ -261,27 +259,8 @@ export default function Home() {
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      // ตรวจสอบว่า response เป็น PDF หรือไม่
-      const contentType = response.headers.get('content-type')
-
-      if (contentType === 'application/pdf') {
-        // ดาวน์โหลด PDF
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `report-pp5-${academicYear}-${semester}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-
-        console.log('PDF downloaded successfully')
-      } else {
-        // กรณีที่ได้ JSON response (สำหรับ fallback)
-        const result = await response.json()
-        console.log('Upload successful:', result)
-      }
+      const result = await response.json()
+      console.log('Upload successful:', result)
 
       // Reset form on success
       setAcademicYear('')
@@ -302,11 +281,11 @@ export default function Home() {
       // Show success message in panel
       updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
         'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
-        'รายงาน PDF ได้ถูกดาวน์โหลดแล้ว',
-        'คุณสามารถส่งไฟล์ใหม่ได้อีกครั้ง'
+        'คุณสามารถเลือกไฟล์ใหม่และส่งข้อมูลอีกครั้งได้',
+        'ขอบคุณที่ใช้บริการ'
       ])
 
-      // Reset panel content to initial state after 10 seconds
+      // Reset panel content to initial state after 5 seconds
       setTimeout(() => {
         setSuccess(false)  // Reset success state
         updatePanelContent('info', 'คำแนะนำการใช้งาน', [
@@ -316,7 +295,7 @@ export default function Home() {
           'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
           'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
         ])
-      }, 10000) // เพิ่มเวลาเป็น 10 วินาที เพื่อให้ผู้ใช้ได้เห็นผลลัพธ์
+      }, 5000)
 
       updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
         'ไฟล์ ปพ.5 ถูกส่งเรียบร้อยแล้ว',
@@ -369,249 +348,338 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 py-5 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center lg:min-h-[calc(100vh-5rem)]">
-
-          {/* Left Column - Form */}
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="text-center lg:text-left">
-              <div className="flex items-center justify-center lg:justify-start mb-4">
-                <Image
-                  src="/logo-ppk-512x512-1.png"
-                  alt="Logo"
-                  width={64}
-                  height={64}
-                  className="mr-3"
-                />
-                <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-                    ระบบตรวจสอบ ปพ.5
-                  </h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    อัปโหลดและตรวจสอบข้อมูลรายงานผลการเรียน
-                  </p>
+          {/* Main Form Section */}
+          <div className="flex justify-center">
+            <div className="max-w-lg w-full">
+              {/* Header */}
+              <div className="text-center mb-7">
+                <div className="flex justify-center mb-3">
+                  <div className="p-1.5 bg-white rounded-xl shadow-md">
+                    <Image
+                      src="/logo-ppk-512x512-1.png"
+                      alt="PPK Logo"
+                      width={50}
+                      height={50}
+                      priority
+                      className="rounded-lg"
+                    />
+                  </div>
                 </div>
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                  ส่งไฟล์ ปพ.5
+                </h1>
+                <p className="text-slate-600">อัปโหลดไฟล์เพื่อตรวจสอบข้อมูล</p>
+                <div className="w-16 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+              </div>
+
+              {/* Form Card */}
+              <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-5">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Academic Year Selection */}
+                  <div className="space-y-2">
+                    <label htmlFor="academicYear" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      ปีการศึกษา <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="academicYear"
+                        value={academicYear}
+                        onChange={(e) => {
+                          setAcademicYear(e.target.value)
+                          setError('')
+                          setSuccess(false)
+                        }}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 font-medium appearance-none cursor-pointer"
+                        required
+                      >
+                        <option value="">เลือกปีการศึกษา</option>
+                        {academicYears.map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Semester Selection */}
+                  <div className="space-y-2">
+                    <label htmlFor="semester" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      ภาคเรียน <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="semester"
+                        value={semester}
+                        onChange={(e) => {
+                          setSemester(e.target.value)
+                          setError('')
+                          setSuccess(false)
+                        }}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 font-medium appearance-none cursor-pointer"
+                        required
+                      >
+                        <option value="">เลือกภาคเรียน</option>
+                        <option value="1">ภาคเรียนที่ 1</option>
+                        <option value="2">ภาคเรียนที่ 2</option>
+                        <option value="3">ภาคเรียนที่ 3</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* File Upload Section - Side by Side */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold text-slate-700">
+                      อัปโหลดไฟล์เอกสาร
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Excel File Upload */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          ไฟล์ ปพ.5 (.xlsx) <span className="text-red-500">*</span>
+                        </label>
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer ${isDragOver
+                            ? 'border-blue-400 bg-blue-50'
+                            : file
+                              ? 'border-green-300 bg-green-50'
+                              : 'border-slate-300 bg-slate-50'
+                            }`}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onClick={() => !file && !isUploading && handleBrowseClick()}
+                        >
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                            accept=".xlsx"
+                            className="hidden"
+                          />
+
+                          {isUploading ? (
+                            <div className="text-blue-600">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mb-2">
+                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm">กำลังตรวจสอบ...</p>
+                            </div>
+                          ) : file ? (
+                            <div className="text-green-700">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-green-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1 break-words">{file.name}</p>
+                              <p className="text-xs text-slate-500 mb-2">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setFile(null)
+                                  setError('')
+                                  setSuccess(false)
+                                  if (fileInputRef.current) {
+                                    fileInputRef.current.value = ''
+                                  }
+                                }}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                ลบ
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-slate-600">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-slate-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1">ลากไฟล์ Excel</p>
+                              <p className="text-xs mb-2">หรือคลิกเพื่อเลือก</p>
+                              <div className="inline-flex items-center px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded font-medium">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8l-8-8-8 8" />
+                                </svg>
+                                เลือกไฟล์
+                              </div>
+                              <p className="text-xs text-slate-400 mt-2">รองรับ .xlsx (สูงสุด 10MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* PDF File Upload */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          รายงาน SGS (.pdf)
+                        </label>
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer ${isPdfDragOver
+                            ? 'border-purple-400 bg-purple-50'
+                            : pdfFile
+                              ? 'border-green-300 bg-green-50'
+                              : 'border-slate-300 bg-slate-50'
+                            }`}
+                          onDragOver={handlePdfDragOver}
+                          onDragLeave={handlePdfDragLeave}
+                          onDrop={handlePdfDrop}
+                          onClick={() => !pdfFile && handlePdfBrowseClick()}
+                        >
+                          <input
+                            type="file"
+                            ref={pdfInputRef}
+                            onChange={(e) => handlePdfFileChange(e.target.files?.[0] || null)}
+                            accept=".pdf"
+                            className="hidden"
+                          />
+
+                          {pdfFile ? (
+                            <div className="text-green-700">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-green-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1 break-words">{pdfFile.name}</p>
+                              <p className="text-xs text-slate-500 mb-2">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setPdfFile(null)
+                                  setError('')
+                                  setSuccess(false)
+                                  if (pdfInputRef.current) {
+                                    pdfInputRef.current.value = ''
+                                  }
+                                }}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                ลบ
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-slate-600">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-slate-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1">ลากไฟล์ PDF</p>
+                              <p className="text-xs mb-2">หรือคลิกเพื่อเลือก</p>
+                              <div className="inline-flex items-center px-3 py-1.5 text-xs text-purple-600 bg-purple-50 rounded font-medium">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8l-8-8-8 8" />
+                                </svg>
+                                เลือกไฟล์
+                              </div>
+                              <p className="text-xs text-slate-400 mt-2">รองรับ .pdf (สูงสุด 10MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Success Message */}
+                  {success && (
+                    <div className="flex items-center space-x-3 text-green-700 bg-green-50 border border-green-200 rounded-lg p-2.5">
+                      <svg className="h-5 w-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">ส่งข้อมูลเรียบร้อยแล้ว!</span>
+                    </div>
+                  )}
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="flex items-center space-x-3 text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">
+                      <svg className="h-5 w-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">{error}</span>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isLoading || isUploading}
+                    className={`w-full py-2.5 px-6 rounded-lg font-semibold ${isLoading || isUploading
+                      ? 'bg-slate-400 text-white cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                      }`}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>กำลังส่งข้อมูล...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span>ส่งข้อมูลเพื่อตรวจสอบ</span>
+                      </div>
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center mt-5 text-slate-500 text-sm">
+                <p>โรงเรียนโพนงามพิทยานุกูล</p>
               </div>
             </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Academic Year and Semester */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="academicYear" className="block text-sm font-medium text-gray-700 mb-1">
-                    ปีการศึกษา *
-                  </label>
-                  <select
-                    id="academicYear"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    required
-                  >
-                    <option value="">เลือกปีการศึกษา</option>
-                    {academicYears.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-1">
-                    ภาคเรียน *
-                  </label>
-                  <select
-                    id="semester"
-                    value={semester}
-                    onChange={(e) => setSemester(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    required
-                  >
-                    <option value="">เลือกภาคเรียน</option>
-                    <option value="1">ภาคเรียนที่ 1</option>
-                    <option value="2">ภาคเรียนที่ 2</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Excel File Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ไฟล์ Excel (.xlsx) *
-                </label>
-                <div
-                  className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragOver
-                      ? 'border-blue-400 bg-blue-50'
-                      : file
-                        ? 'border-green-400 bg-green-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-
-                  {isUploading ? (
-                    <div className="space-y-2">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="text-sm text-gray-600">กำลังตรวจสอบไฟล์...</p>
-                    </div>
-                  ) : file ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center">
-                        <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <p className="text-sm font-medium text-green-700">{file.name}</p>
-                      <p className="text-xs text-green-600">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleBrowseClick}
-                        className="text-xs text-blue-600 hover:text-blue-700 underline"
-                      >
-                        เปลี่ยนไฟล์
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <svg className="mx-auto h-8 w-8 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={handleBrowseClick}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                        >
-                          คลิกเพื่อเลือกไฟล์
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">หรือลากไฟล์มาวางที่นี่</p>
-                      </div>
-                      <p className="text-xs text-gray-400">รองรับไฟล์ .xlsx ขนาดไม่เกิน 10MB</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* PDF File Upload (Optional) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  รายงาน SGS (.pdf) - ไม่บังคับ
-                </label>
-                <div
-                  className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isPdfDragOver
-                      ? 'border-orange-400 bg-orange-50'
-                      : pdfFile
-                        ? 'border-green-400 bg-green-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  onDragOver={handlePdfDragOver}
-                  onDragLeave={handlePdfDragLeave}
-                  onDrop={handlePdfDrop}
-                >
-                  <input
-                    ref={pdfInputRef}
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={(e) => handlePdfFileChange(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-
-                  {pdfFile ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center">
-                        <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <p className="text-sm font-medium text-green-700">{pdfFile.name}</p>
-                      <p className="text-xs text-green-600">
-                        {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handlePdfBrowseClick}
-                        className="text-xs text-blue-600 hover:text-blue-700 underline"
-                      >
-                        เปลี่ยนไฟล์
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={handlePdfBrowseClick}
-                          className="text-sm font-medium text-orange-600 hover:text-orange-700"
-                        >
-                          คลิกเพื่อเลือกไฟล์ PDF
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">หรือลากไฟล์มาวางที่นี่</p>
-                      </div>
-                      <p className="text-xs text-gray-400">รองรับไฟล์ .pdf ขนาดไม่เกิน 10MB</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex">
-                    <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="ml-2 text-sm text-red-700">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !academicYear || !semester || !file}
-                className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${isLoading || !academicYear || !semester || !file
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                  }`}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    กำลังประมวลผล...
-                  </div>
-                ) : (
-                  'ส่งข้อมูลเพื่อสร้างรายงาน PDF'
-                )}
-              </button>
-            </form>
           </div>
 
-          {/* Right Column - Information Panel */}
-          <div className="lg:pl-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Side Panel */}
+          <div className="flex justify-center">
+            <div className="w-full max-w-lg">
               {/* Panel Header */}
-              <div className={`px-6 py-4 ${panelContent.type === 'error' ? 'bg-red-50 border-b border-red-200' :
-                  panelContent.type === 'warning' ? 'bg-yellow-50 border-b border-yellow-200' :
-                    panelContent.type === 'success' ? 'bg-green-50 border-b border-green-200' :
-                      'bg-blue-50 border-b border-blue-200'
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-slate-800">ข้อมูลและคำแนะนำ</h2>
+              </div>
+
+              {/* Panel Content */}
+              <div className={`bg-white rounded-xl shadow-lg border-2 p-5 ${panelContent.type === 'error' ? 'border-red-200 bg-red-50' :
+                panelContent.type === 'warning' ? 'border-yellow-200 bg-yellow-50' :
+                  panelContent.type === 'success' ? 'border-green-200 bg-green-50' :
+                    'border-blue-200 bg-blue-50'
                 }`}>
-                <div className="flex items-center">
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${panelContent.type === 'error' ? 'bg-red-100' :
-                      panelContent.type === 'warning' ? 'bg-yellow-100' :
-                        panelContent.type === 'success' ? 'bg-green-100' :
-                          'bg-blue-100'
+                {/* Panel Icon and Title */}
+                <div className="flex items-center mb-4">
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${panelContent.type === 'error' ? 'bg-red-100' :
+                    panelContent.type === 'warning' ? 'bg-yellow-100' :
+                      panelContent.type === 'success' ? 'bg-green-100' :
+                        'bg-blue-100'
                     }`}>
                     {panelContent.type === 'error' && (
                       <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -642,10 +710,7 @@ export default function Home() {
                     {panelContent.title}
                   </h3>
                 </div>
-              </div>
 
-              {/* Panel Content */}
-              <div className="p-6">
                 {/* Panel Messages */}
                 <div className="space-y-2">
                   {panelContent.messages.map((message, index) => (
