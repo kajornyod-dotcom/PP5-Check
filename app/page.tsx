@@ -20,7 +20,7 @@ export default function Home() {
     messages: [
       'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
       'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
-      'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf)',
+      'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf) - ไม่บังคับ',
       'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
       'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
     ]
@@ -226,14 +226,14 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!academicYear || !semester || !file || !pdfFile) {
+    if (!academicYear || !semester || !file) {
       setError('กรุณากรอกข้อมูลให้ครบทุกช่อง')
       updatePanelContent('warning', 'ข้อมูลไม่ครบถ้วน', [
         !academicYear ? '❌ ยังไม่ได้เลือกปีการศึกษา' : '✅ เลือกปีการศึกษาแล้ว',
         !semester ? '❌ ยังไม่ได้เลือกภาคเรียน' : '✅ เลือกภาคเรียนแล้ว',
         !file ? '❌ ยังไม่ได้เลือกไฟล์ Excel' : '✅ เลือกไฟล์ Excel แล้ว',
-        !pdfFile ? '❌ ยังไม่ได้เลือกไฟล์ PDF รายงาน SGS' : '✅ เลือกไฟล์ PDF แล้ว',
-        'กรุณากรอกข้อมูลให้ครบถ้วนก่อนส่ง'
+        pdfFile ? '✅ เลือกไฟล์ PDF รายงาน SGS แล้ว' : '⚠️  ไฟล์ PDF รายงาน SGS (ไม่บังคับ)',
+        'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วนก่อนส่ง'
       ])
       return
     }
@@ -247,7 +247,9 @@ export default function Home() {
       formData.append('academicYear', academicYear)
       formData.append('semester', semester)
       formData.append('file_xlsx', file)
-      formData.append('file_pdf', pdfFile)
+      if (pdfFile) {
+        formData.append('file_pdf', pdfFile)
+      }
 
       // Get backend URL from environment variable
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
@@ -369,7 +371,7 @@ export default function Home() {
                   {/* Academic Year Selection */}
                   <div className="space-y-2">
                     <label htmlFor="academicYear" className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      ปีการศึกษา
+                      ปีการศึกษา <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -397,7 +399,7 @@ export default function Home() {
                   {/* Semester Selection */}
                   <div className="space-y-2">
                     <label htmlFor="semester" className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      ภาคเรียน
+                      ภาคเรียน <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -430,7 +432,7 @@ export default function Home() {
                       {/* Excel File Upload */}
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          ไฟล์ ปพ.5 (.xlsx)
+                          ไฟล์ ปพ.5 (.xlsx) <span className="text-red-500">*</span>
                         </label>
                         <div
                           className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer ${isDragOver
