@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@playwright/test": "^1.53.1",
     "@prisma/client": "^6.10.1",
     "next": "15.3.4",

@@ -14,6 +14,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [uploadResult, setUploadResult] = useState<any>(null)
+  const [showOcrResult, setShowOcrResult] = useState(false)
   const [panelContent, setPanelContent] = useState({
     type: 'info' as 'info' | 'error' | 'warning' | 'success',
     title: 'คำแนะนำการใช้งาน',
@@ -41,6 +43,8 @@ export default function Home() {
     setError('')
     setSuccess(false)
     setIsUploading(false)  // Reset uploading state
+    setUploadResult(null)  // Clear previous results
+    setShowOcrResult(false)  // Hide OCR results
 
     if (!selectedFile) {
       setFile(null)
@@ -139,6 +143,8 @@ export default function Home() {
   const handlePdfFileChange = async (selectedFile: File | null) => {
     setError('')
     setSuccess(false)
+    setUploadResult(null)  // Clear previous results
+    setShowOcrResult(false)  // Hide OCR results
 
     if (!selectedFile) {
       setPdfFile(null)
@@ -262,6 +268,14 @@ export default function Home() {
       const result = await response.json()
       console.log('Upload successful:', result)
 
+      // บันทึกผลลัพธ์
+      setUploadResult(result)
+
+      // ตรวจสอบว่ามีผลลัพธ์ OCR หรือไม่
+      if (result.data?.pdfOcrResult) {
+        setShowOcrResult(true)
+      }
+
       // Reset form on success
       setAcademicYear('')
       setSemester('')
@@ -278,12 +292,23 @@ export default function Home() {
         pdfInputRef.current.value = ''
       }
 
-      // Show success message in panel
-      updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
+      // สร้างข้อความผลลัพธ์
+      const successMessages = [
         'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
-        'คุณสามารถเลือกไฟล์ใหม่และส่งข้อมูลอีกครั้งได้',
-        'ขอบคุณที่ใช้บริการ'
-      ])
+        `ไฟล์ Excel: ${result.data?.fileName || 'ไม่ระบุ'}`,
+      ]
+
+      if (result.data?.pdfFileName) {
+        successMessages.push(`ไฟล์ PDF: ${result.data.pdfFileName}`)
+        if (result.data?.pdfOcrResult) {
+          successMessages.push('✓ ประมวลผล PDF ด้วย Gemini AI สำเร็จ')
+        }
+      }
+
+      successMessages.push('คุณสามารถดูผลลัพธ์ด้านล่างหรือส่งไฟล์ใหม่ได้')
+
+      // Show success message in panel
+      updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', successMessages)
 
       // Reset panel content to initial state after 5 seconds
       setTimeout(() => {
@@ -295,7 +320,7 @@ export default function Home() {
           'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
           'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
         ])
-      }, 5000)
+      }, 10000) // เพิ่มเวลาเป็น 10 วินาที เพื่อให้ผู้ใช้ได้เห็นผลลัพธ์
 
       updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
         'ไฟล์ ปพ.5 ถูกส่งเรียบร้อยแล้ว',
@@ -737,10 +762,205 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
+                {/* Show Results Button */}
+                {uploadResult?.data?.pdfOcrResult && !showOcrResult && (
+                  <div className="mt-4 pt-4 border-t border-green-200">
+                    <button
+                      onClick={() => setShowOcrResult(true)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>ดูผลการวิเคราะห์ PDF</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* Results Section */}
+        {showOcrResult && uploadResult?.data?.pdfOcrResult && (
+          <div className="mt-8 max-w-5xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 to-blue-600 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    ผลการวิเคราะห์ไฟล์ PDF ด้วย Gemini AI
+                  </h3>
+                  <button
+                    onClick={() => setShowOcrResult(false)}
+                    className="text-white hover:text-gray-200 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Course Information */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                      ข้อมูลรายวิชา
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-600">รหัสวิชา</span>
+                        <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                          {uploadResult.data.pdfOcrResult.course_id || 'ไม่ระบุ'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-600">ชื่อวิชา</span>
+                        <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                          {uploadResult.data.pdfOcrResult.course_name || 'ไม่ระบุ'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-600">ปีการศึกษา</span>
+                          <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                            {uploadResult.data.pdfOcrResult.academic_year || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-600">เทอม</span>
+                          <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                            {uploadResult.data.pdfOcrResult.semester || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-600">ระดับชั้น</span>
+                          <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                            {uploadResult.data.pdfOcrResult.grade_level || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-600">กลุ่มเรียน</span>
+                          <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                            {uploadResult.data.pdfOcrResult.section || 'ไม่ระบุ'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-600">ครูผู้สอน</span>
+                        <span className="text-gray-800 bg-gray-50 px-3 py-2 rounded-md">
+                          {uploadResult.data.pdfOcrResult.teacher || 'ไม่ระบุ'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Validation Results */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                      ผลการตรวจสอบมาตรฐาน
+                    </h4>
+                    <div className="space-y-3">
+                      <div className={`p-4 rounded-lg border-2 ${uploadResult.data.pdfOcrResult.grade_valid ?
+                        'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-800">ผลการเรียน</span>
+                          <div className={`flex items-center space-x-2 ${uploadResult.data.pdfOcrResult.grade_valid ?
+                            'text-green-600' : 'text-red-600'}`}>
+                            {uploadResult.data.pdfOcrResult.grade_valid ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            )}
+                            <span className="font-semibold">
+                              {uploadResult.data.pdfOcrResult.grade_valid ? 'ผ่าน' : 'ไม่ผ่าน'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          มากกว่า 0 อย่างน้อย 70% ของนักเรียน
+                        </p>
+                      </div>
+
+                      <div className={`p-4 rounded-lg border-2 ${uploadResult.data.pdfOcrResult.attitude_valid ?
+                        'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-800">คุณลักษณะอันพึงประสงค์</span>
+                          <div className={`flex items-center space-x-2 ${uploadResult.data.pdfOcrResult.attitude_valid ?
+                            'text-green-600' : 'text-red-600'}`}>
+                            {uploadResult.data.pdfOcrResult.attitude_valid ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            )}
+                            <span className="font-semibold">
+                              {uploadResult.data.pdfOcrResult.attitude_valid ? 'ผ่าน' : 'ไม่ผ่าน'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          มากกว่า 0 อย่างน้อย 80% ของนักเรียน
+                        </p>
+                      </div>
+
+                      <div className={`p-4 rounded-lg border-2 ${uploadResult.data.pdfOcrResult.read_analyze_write_valid ?
+                        'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-800">อ่าน วิเคราะห์ เขียน</span>
+                          <div className={`flex items-center space-x-2 ${uploadResult.data.pdfOcrResult.read_analyze_write_valid ?
+                            'text-green-600' : 'text-red-600'}`}>
+                            {uploadResult.data.pdfOcrResult.read_analyze_write_valid ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            )}
+                            <span className="font-semibold">
+                              {uploadResult.data.pdfOcrResult.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          มากกว่า 0 อย่างน้อย 80% ของนักเรียน
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      ไฟล์: {uploadResult.data?.pdfFileName}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      ประมวลผลเมื่อ: {new Date().toLocaleString('th-TH')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
