@@ -420,155 +420,164 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* File Upload */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      ไฟล์ ปพ.5 (.xlsx)
-                    </label>
-                    <div
-                      className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer ${isDragOver
-                        ? 'border-blue-400 bg-blue-50'
-                        : file
-                          ? 'border-green-300 bg-green-50'
-                          : 'border-slate-300 bg-slate-50'
-                        }`}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={() => !file && !isUploading && handleBrowseClick()}
-                    >
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                        accept=".xlsx"
-                        className="hidden"
-                      />
-
-                      {isUploading ? (
-                        <div className="text-blue-600">
-                          <div className="inline-flex items-center justify-center w-11 h-11 bg-blue-100 rounded-full mb-2.5">
-                            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          </div>
-                          <p className="font-semibold">กำลังตรวจสอบไฟล์...</p>
-                        </div>
-                      ) : file ? (
-                        <div className="text-green-700">
-                          <div className="inline-flex items-center justify-center w-11 h-11 bg-green-100 rounded-full mb-2.5">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <p className="font-semibold mb-1">{file.name}</p>
-                          <p className="text-sm text-slate-500 mb-2.5">ขนาด: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setFile(null)
-                              setError('')
-                              setSuccess(false)
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
-                          >
-                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            ลบไฟล์
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="text-slate-600">
-                          <div className="inline-flex items-center justify-center w-11 h-11 bg-slate-100 rounded-full mb-2.5">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                          </div>
-                          <p className="font-semibold mb-1.5">ลากไฟล์มาวางที่นี่</p>
-                          <p className="text-sm mb-2.5">หรือ</p>
-                          <div className="inline-flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8l-8-8-8 8" />
-                            </svg>
-                            เลือกไฟล์จากเครื่อง
-                          </div>
-                          <p className="text-xs text-slate-400 mt-2.5">รองรับเฉพาะไฟล์ .xlsx (สูงสุด 10MB)</p>
-                        </div>
-                      )}
+                  {/* File Upload Section - Side by Side */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold text-slate-700">
+                      อัปโหลดไฟล์เอกสาร
                     </div>
-                  </div>
 
-                  {/* PDF File Upload */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      รายงาน ปพ.5 จาก SGS (.pdf)
-                    </label>
-                    <div
-                      className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer ${isPdfDragOver
-                        ? 'border-purple-400 bg-purple-50'
-                        : pdfFile
-                          ? 'border-green-300 bg-green-50'
-                          : 'border-slate-300 bg-slate-50'
-                        }`}
-                      onDragOver={handlePdfDragOver}
-                      onDragLeave={handlePdfDragLeave}
-                      onDrop={handlePdfDrop}
-                      onClick={() => !pdfFile && handlePdfBrowseClick()}
-                    >
-                      <input
-                        type="file"
-                        ref={pdfInputRef}
-                        onChange={(e) => handlePdfFileChange(e.target.files?.[0] || null)}
-                        accept=".pdf"
-                        className="hidden"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Excel File Upload */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          ไฟล์ ปพ.5 (.xlsx)
+                        </label>
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer ${isDragOver
+                            ? 'border-blue-400 bg-blue-50'
+                            : file
+                              ? 'border-green-300 bg-green-50'
+                              : 'border-slate-300 bg-slate-50'
+                            }`}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onClick={() => !file && !isUploading && handleBrowseClick()}
+                        >
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                            accept=".xlsx"
+                            className="hidden"
+                          />
 
-                      {pdfFile ? (
-                        <div className="text-green-700">
-                          <div className="inline-flex items-center justify-center w-11 h-11 bg-green-100 rounded-full mb-2.5">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <p className="font-semibold mb-1">{pdfFile.name}</p>
-                          <p className="text-sm text-slate-500 mb-2.5">ขนาด: {(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setPdfFile(null)
-                              setError('')
-                              setSuccess(false)
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
-                          >
-                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            ลบไฟล์
-                          </button>
+                          {isUploading ? (
+                            <div className="text-blue-600">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mb-2">
+                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm">กำลังตรวจสอบ...</p>
+                            </div>
+                          ) : file ? (
+                            <div className="text-green-700">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-green-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1 break-words">{file.name}</p>
+                              <p className="text-xs text-slate-500 mb-2">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setFile(null)
+                                  setError('')
+                                  setSuccess(false)
+                                }}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                ลบ
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-slate-600">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-slate-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1">ลากไฟล์ Excel</p>
+                              <p className="text-xs mb-2">หรือคลิกเพื่อเลือก</p>
+                              <div className="inline-flex items-center px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded font-medium">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8l-8-8-8 8" />
+                                </svg>
+                                เลือกไฟล์
+                              </div>
+                              <p className="text-xs text-slate-400 mt-2">รองรับ .xlsx (สูงสุด 10MB)</p>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-slate-600">
-                          <div className="inline-flex items-center justify-center w-11 h-11 bg-slate-100 rounded-full mb-2.5">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <p className="font-semibold mb-1.5">ลากไฟล์ PDF มาวางที่นี่</p>
-                          <p className="text-sm mb-2.5">หรือ</p>
-                          <div className="inline-flex items-center px-4 py-2 text-purple-600 bg-purple-50 rounded-lg font-semibold">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8l-8-8-8 8" />
-                            </svg>
-                            เลือกไฟล์ PDF
-                          </div>
-                          <p className="text-xs text-slate-400 mt-2.5">รองรับเฉพาะไฟล์ .pdf (สูงสุด 10MB)</p>
+                      </div>
+
+                      {/* PDF File Upload */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          รายงาน SGS (.pdf)
+                        </label>
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer ${isPdfDragOver
+                            ? 'border-purple-400 bg-purple-50'
+                            : pdfFile
+                              ? 'border-green-300 bg-green-50'
+                              : 'border-slate-300 bg-slate-50'
+                            }`}
+                          onDragOver={handlePdfDragOver}
+                          onDragLeave={handlePdfDragLeave}
+                          onDrop={handlePdfDrop}
+                          onClick={() => !pdfFile && handlePdfBrowseClick()}
+                        >
+                          <input
+                            type="file"
+                            ref={pdfInputRef}
+                            onChange={(e) => handlePdfFileChange(e.target.files?.[0] || null)}
+                            accept=".pdf"
+                            className="hidden"
+                          />
+
+                          {pdfFile ? (
+                            <div className="text-green-700">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-green-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1 break-words">{pdfFile.name}</p>
+                              <p className="text-xs text-slate-500 mb-2">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setPdfFile(null)
+                                  setError('')
+                                  setSuccess(false)
+                                }}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
+                              >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                ลบ
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-slate-600">
+                              <div className="inline-flex items-center justify-center w-10 h-10 bg-slate-100 rounded-full mb-2">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <p className="font-medium text-sm mb-1">ลากไฟล์ PDF</p>
+                              <p className="text-xs mb-2">หรือคลิกเพื่อเลือก</p>
+                              <div className="inline-flex items-center px-3 py-1.5 text-xs text-purple-600 bg-purple-50 rounded font-medium">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8l-8-8-8 8" />
+                                </svg>
+                                เลือกไฟล์
+                              </div>
+                              <p className="text-xs text-slate-400 mt-2">รองรับ .pdf (สูงสุด 10MB)</p>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
 
