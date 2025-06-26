@@ -216,18 +216,13 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Reset states at the beginning of submission
-    setError('')
-    setSuccess(false)
-
     if (!academicYear || !semester || !file) {
-      setError('กรุณากรอกข้อมูลให้ครบทุกช่อง')
-      updatePanelContent('warning', 'ข้อมูลไม่ครบถ้วน', [
-        !academicYear ? '❌ ยังไม่ได้เลือกปีการศึกษา' : '✅ เลือกปีการศึกษาแล้ว',
-        !semester ? '❌ ยังไม่ได้เลือกภาคเรียน' : '✅ เลือกภาคเรียนแล้ว',
-        !file ? '❌ ยังไม่ได้เลือกไฟล์ Excel' : '✅ เลือกไฟล์ Excel แล้ว',
-        pdfFile ? '✅ เลือกไฟล์ PDF รายงาน SGS แล้ว' : '⚠️  ไฟล์ PDF รายงาน SGS (ไม่บังคับ)',
-        'กรุณากรอกข้อมูลที่บังคับให้ครบถ้วนก่อนส่ง'
+      setError('กรุณากรอกข้อมูลให้ครบถ้วน')
+      updatePanelContent('error', 'ข้อมูลไม่ครบถ้วน', [
+        'กรุณาเลือกปีการศึกษา',
+        'กรุณาเลือกภาคเรียน',
+        'กรุณาเลือกไฟล์ Excel (.xlsx)',
+        'ตรวจสอบข้อมูลและลองอีกครั้ง'
       ])
       return
     }
@@ -236,17 +231,24 @@ export default function Home() {
     setError('')
 
     try {
-      // Create FormData object for file upload
+      // Create FormData
       const formData = new FormData()
       formData.append('academicYear', academicYear)
       formData.append('semester', semester)
       formData.append('file_xlsx', file)
+
       if (pdfFile) {
         formData.append('file_pdf', pdfFile)
       }
 
-      // Get backend URL from environment variable
       const backendUrl = '/api/upload'
+
+      updatePanelContent('info', 'กำลังประมวลผล...', [
+        'กำลังส่งไฟล์ไปยังเซิร์ฟเวอร์',
+        'กำลังอ่านข้อมูลจากไฟล์ Excel',
+        pdfFile ? 'กำลังประมวลผล PDF ด้วย Gemini AI' : '',
+        'กำลังสร้างรายงาน PDF...'
+      ].filter(Boolean))
 
       // Send POST request to local API
       const response = await fetch(backendUrl, {
@@ -259,8 +261,27 @@ export default function Home() {
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
-      console.log('Upload successful:', result)
+      // ตรวจสอบว่า response เป็น PDF หรือไม่
+      const contentType = response.headers.get('content-type')
+
+      if (contentType === 'application/pdf') {
+        // ดาวน์โหลด PDF
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `report-pp5-${academicYear}-${semester}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+
+        console.log('PDF downloaded successfully')
+      } else {
+        // กรณีที่ได้ JSON response (สำหรับ fallback)
+        const result = await response.json()
+        console.log('Upload successful:', result)
+      }
 
       // Reset form on success
       setAcademicYear('')
@@ -281,11 +302,11 @@ export default function Home() {
       // Show success message in panel
       updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
         'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
-        'คุณสามารถเลือกไฟล์ใหม่และส่งข้อมูลอีกครั้งได้',
-        'ขอบคุณที่ใช้บริการ'
+        'รายงาน PDF ได้ถูกดาวน์โหลดแล้ว',
+        'คุณสามารถส่งไฟล์ใหม่ได้อีกครั้ง'
       ])
 
-      // Reset panel content to initial state after 5 seconds
+      // Reset panel content to initial state after 10 seconds
       setTimeout(() => {
         setSuccess(false)  // Reset success state
         updatePanelContent('info', 'คำแนะนำการใช้งาน', [
@@ -295,17 +316,7 @@ export default function Home() {
           'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
           'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
         ])
-      }, 5000)
-
-      updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
-        'ไฟล์ ปพ.5 ถูกส่งเรียบร้อยแล้ว',
-        'ระบบกำลังประมวลผลข้อมูล',
-        'ผลการตรวจสอบจะปรากฏในภายหลัง',
-        'ขอบคุณที่ใช้บริการ'
-      ])
-
-      // Show success message
-      setTimeout(() => setSuccess(false), 5000)
+      }, 10000) // เพิ่มเวลาเป็น 10 วินาที เพื่อให้ผู้ใช้ได้เห็นผลลัพธ์
 
     } catch (error) {
       console.error('Upload error:', error)
