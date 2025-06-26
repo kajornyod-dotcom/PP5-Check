@@ -37,51 +37,6 @@ export default function Home() {
     setPanelContent({ type, title, messages })
   }
 
-  const testConnection = async () => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
-
-    if (!backendUrl) {
-      updatePanelContent('error', 'การตั้งค่าระบบผิดพลาด', [
-        'ไม่พบการตั้งค่า Backend URL',
-        'กรุณาตรวจสอบไฟล์ .env.local',
-        'และตั้งค่า NEXT_PUBLIC_BACKEND_URL'
-      ])
-      return
-    }
-
-    updatePanelContent('warning', 'กำลังทดสอบการเชื่อมต่อ...', [
-      `กำลังเชื่อมต่อไปยัง: ${backendUrl}`,
-      'กรุณารอสักครู่...'
-    ])
-
-    try {
-      const response = await fetch(backendUrl.replace('/upload', '/health'), {
-        method: 'GET',
-      })
-
-      if (response.ok) {
-        updatePanelContent('success', 'การเชื่อมต่อสำเร็จ!', [
-          'เซิร์ฟเวอร์กำลังทำงานปกติ',
-          `URL: ${backendUrl}`,
-          'สามารถส่งไฟล์ได้แล้ว'
-        ])
-      } else {
-        updatePanelContent('warning', 'เซิร์ฟเวอร์ตอบสนอง แต่อาจมีปัญหา', [
-          `HTTP Status: ${response.status}`,
-          `URL: ${backendUrl}`,
-          'ลองส่งไฟล์ดูได้'
-        ])
-      }
-    } catch (error) {
-      updatePanelContent('error', 'ไม่สามารถเชื่อมต่อได้', [
-        'เซิร์ฟเวอร์ไม่ตอบสนอง',
-        `URL: ${backendUrl}`,
-        'ตรวจสอบว่าเซิร์ฟเวอร์กำลังทำงาน',
-        'ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'
-      ])
-    }
-  }
-
   const handleFileChange = async (selectedFile: File | null) => {
     setError('')
     setSuccess(false)
@@ -780,18 +735,12 @@ export default function Home() {
                 {panelContent.type === 'info' && (
                   <div className="mt-4 pt-4 border-t border-blue-200">
                     <div className="text-xs text-blue-600 font-medium mb-2">การตรวจสอบไฟล์</div>
-                    <div className="space-y-1 text-xs text-blue-700 mb-3">
+                    <div className="space-y-1 text-xs text-blue-700">
                       <div>✓ ไฟล์ Excel: .xlsx เท่านั้น</div>
                       <div>✓ ไฟล์ PDF: .pdf เท่านั้น</div>
                       <div>✓ ขนาดไฟล์: สูงสุด 10 MB</div>
                       <div>✓ เนื้อหา: ข้อมูล ปพ.5 และรายงาน SGS</div>
                     </div>
-                    <button
-                      onClick={testConnection}
-                      className="w-full px-3 py-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 border border-blue-300"
-                    >
-                      🔍 ทดสอบการเชื่อมต่อเซิร์ฟเวอร์
-                    </button>
                   </div>
                 )}
               </div>
