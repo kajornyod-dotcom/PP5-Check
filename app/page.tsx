@@ -85,10 +85,22 @@ export default function Home() {
   const handleFileChange = async (selectedFile: File | null) => {
     setError('')
     setSuccess(false)
+    setIsUploading(false)  // Reset uploading state
 
     if (!selectedFile) {
       setFile(null)
       return
+    }
+
+    // Reset panel to info state when starting new file selection
+    if (panelContent.type === 'success') {
+      updatePanelContent('info', 'คำแนะนำการใช้งาน', [
+        'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
+        'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
+        'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf) - ไม่บังคับ',
+        'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
+        'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
+      ])
     }
 
     setIsUploading(true)
@@ -107,6 +119,9 @@ export default function Home() {
       ])
       setFile(null)
       setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
       return
     }
 
@@ -120,6 +135,9 @@ export default function Home() {
       ])
       setFile(null)
       setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
       return
     }
 
@@ -172,6 +190,17 @@ export default function Home() {
       return
     }
 
+    // Reset panel to info state when starting new file selection
+    if (panelContent.type === 'success') {
+      updatePanelContent('info', 'คำแนะนำการใช้งาน', [
+        'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
+        'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
+        'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf) - ไม่บังคับ',
+        'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
+        'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
+      ])
+    }
+
     // Check file type
     if (selectedFile.type !== 'application/pdf' &&
       !selectedFile.name.toLowerCase().endsWith('.pdf')) {
@@ -182,6 +211,9 @@ export default function Home() {
         'ตรวจสอบให้แน่ใจว่าไฟล์เป็น PDF'
       ])
       setPdfFile(null)
+      if (pdfInputRef.current) {
+        pdfInputRef.current.value = ''
+      }
       return
     }
 
@@ -194,6 +226,9 @@ export default function Home() {
         'กรุณาลดขนาดไฟล์หรือเลือกไฟล์อื่น'
       ])
       setPdfFile(null)
+      if (pdfInputRef.current) {
+        pdfInputRef.current.value = ''
+      }
       return
     }
 
@@ -225,6 +260,10 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Reset states at the beginning of submission
+    setError('')
+    setSuccess(false)
 
     if (!academicYear || !semester || !file) {
       setError('กรุณากรอกข้อมูลให้ครบทุกช่อง')
@@ -274,6 +313,35 @@ export default function Home() {
       setFile(null)
       setPdfFile(null)
       setSuccess(true)
+      setIsUploading(false)  // Reset uploading state
+
+      // Clear file input values
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      if (pdfInputRef.current) {
+        pdfInputRef.current.value = ''
+      }
+
+      // Show success message in panel
+      updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
+        'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
+        'คุณสามารถเลือกไฟล์ใหม่และส่งข้อมูลอีกครั้งได้',
+        'ขอบคุณที่ใช้บริการ'
+      ])
+
+      // Reset panel content to initial state after 5 seconds
+      setTimeout(() => {
+        setSuccess(false)  // Reset success state
+        updatePanelContent('info', 'คำแนะนำการใช้งาน', [
+          'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
+          'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
+          'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf) - ไม่บังคับ',
+          'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
+          'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
+        ])
+      }, 5000)
+
       updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
         'ไฟล์ ปพ.5 ถูกส่งเรียบร้อยแล้ว',
         'ระบบกำลังประมวลผลข้อมูล',
@@ -367,7 +435,11 @@ export default function Home() {
                       <select
                         id="academicYear"
                         value={academicYear}
-                        onChange={(e) => setAcademicYear(e.target.value)}
+                        onChange={(e) => {
+                          setAcademicYear(e.target.value)
+                          setError('')
+                          setSuccess(false)
+                        }}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 font-medium appearance-none cursor-pointer"
                         required
                       >
@@ -395,7 +467,11 @@ export default function Home() {
                       <select
                         id="semester"
                         value={semester}
-                        onChange={(e) => setSemester(e.target.value)}
+                        onChange={(e) => {
+                          setSemester(e.target.value)
+                          setError('')
+                          setSuccess(false)
+                        }}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 font-medium appearance-none cursor-pointer"
                         required
                       >
@@ -470,6 +546,9 @@ export default function Home() {
                                   setFile(null)
                                   setError('')
                                   setSuccess(false)
+                                  if (fileInputRef.current) {
+                                    fileInputRef.current.value = ''
+                                  }
                                 }}
                                 className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
                               >
@@ -541,6 +620,9 @@ export default function Home() {
                                   setPdfFile(null)
                                   setError('')
                                   setSuccess(false)
+                                  if (pdfInputRef.current) {
+                                    pdfInputRef.current.value = ''
+                                  }
                                 }}
                                 className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
                               >
