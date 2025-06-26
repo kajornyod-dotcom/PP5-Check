@@ -252,19 +252,9 @@ export default function Home() {
       }
 
       // Get backend URL from environment variable
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const backendUrl = '/api/upload'
 
-      if (!backendUrl) {
-        updatePanelContent('error', 'การตั้งค่าระบบผิดพลาด', [
-          'ไม่พบการตั้งค่า Backend URL',
-          'กรุณาตรวจสอบไฟล์ .env.local',
-          'และตั้งค่า NEXT_PUBLIC_BACKEND_URL',
-          'ติดต่อผู้ดูแลระบบหากปัญหายังคงอยู่'
-        ])
-        throw new Error('Backend URL not configured')
-      }
-
-      // Send POST request to backend
+      // Send POST request to local API
       const response = await fetch(backendUrl, {
         method: 'POST',
         body: formData,
