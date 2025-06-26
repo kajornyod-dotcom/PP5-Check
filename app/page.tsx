@@ -2,6 +2,7 @@
 
 import { useState, useRef, DragEvent } from 'react'
 import Image from 'next/image'
+import { generatePDF, validateReportData } from '@/lib/pdfGenerator'
 
 export default function Home() {
   const [academicYear, setAcademicYear] = useState('')
@@ -247,7 +248,7 @@ export default function Home() {
         'กำลังส่งไฟล์ไปยังเซิร์ฟเวอร์',
         'กำลังอ่านข้อมูลจากไฟล์ Excel',
         pdfFile ? 'กำลังประมวลผล PDF ด้วย Gemini AI' : '',
-        'กำลังสร้างรายงาน PDF...'
+        'กำลังเตรียมข้อมูลสำหรับรายงาน...'
       ].filter(Boolean))
 
       // Send POST request to local API
@@ -261,62 +262,57 @@ export default function Home() {
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      // ตรวจสอบว่า response เป็น PDF หรือไม่
-      const contentType = response.headers.get('content-type')
+      // รับข้อมูล JSON จาก backend
+      const result = await response.json()
+      console.log('Upload successful:', result)
 
-      if (contentType === 'application/pdf') {
-        // ดาวน์โหลด PDF
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `report-pp5-${academicYear}-${semester}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+      // ตรวจสอบโครงสร้างข้อมูลและสร้าง PDF
+      if (validateReportData(result)) {
+        try {
+          generatePDF(result)
 
-        console.log('PDF downloaded successfully')
+          // Reset form on success
+          setAcademicYear('')
+          setSemester('')
+          setFile(null)
+          setPdfFile(null)
+          setSuccess(true)
+          setIsUploading(false)  // Reset uploading state
+
+          // Clear file input values
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+          if (pdfInputRef.current) {
+            pdfInputRef.current.value = ''
+          }
+
+          // Show success message in panel
+          updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
+            'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
+            'รายงาน PDF ได้ถูกสร้างและดาวน์โหลดแล้ว',
+            'คุณสามารถส่งไฟล์ใหม่ได้อีกครั้ง'
+          ])
+
+          // Reset panel content to initial state after 10 seconds
+          setTimeout(() => {
+            setSuccess(false)  // Reset success state
+            updatePanelContent('info', 'คำแนะนำการใช้งาน', [
+              'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
+              'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
+              'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf) - ไม่บังคับ',
+              'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
+              'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
+            ])
+          }, 10000)
+        } catch (pdfError) {
+          console.error('ข้อผิดพลาดในการสร้าง PDF:', pdfError)
+          throw new Error(pdfError instanceof Error ? pdfError.message : 'ไม่สามารถสร้าง PDF ได้')
+        }
       } else {
-        // กรณีที่ได้ JSON response (สำหรับ fallback)
-        const result = await response.json()
-        console.log('Upload successful:', result)
-      }
-
-      // Reset form on success
-      setAcademicYear('')
-      setSemester('')
-      setFile(null)
-      setPdfFile(null)
-      setSuccess(true)
-      setIsUploading(false)  // Reset uploading state
-
-      // Clear file input values
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-      if (pdfInputRef.current) {
-        pdfInputRef.current.value = ''
-      }
-
-      // Show success message in panel
-      updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
-        'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
-        'รายงาน PDF ได้ถูกดาวน์โหลดแล้ว',
-        'คุณสามารถส่งไฟล์ใหม่ได้อีกครั้ง'
-      ])
-
-      // Reset panel content to initial state after 10 seconds
-      setTimeout(() => {
-        setSuccess(false)  // Reset success state
-        updatePanelContent('info', 'คำแนะนำการใช้งาน', [
-          'เลือกปีการศึกษาและภาคเรียนที่ต้องการ',
-          'อัปโหลดไฟล์ Excel (.xlsx) ที่มีข้อมูล ปพ.5',
-          'อัปโหลดรายงาน ปพ.5 จาก SGS (.pdf) - ไม่บังคับ',
-          'ไฟล์ต้องมีขนาดไม่เกิน 10MB',
-          'กดปุ่ม "ส่งข้อมูลเพื่อตรวจสอบ" เมื่อพร้อม'
-        ])
-      }, 10000) // เพิ่มเวลาเป็น 10 วินาที เพื่อให้ผู้ใช้ได้เห็นผลลัพธ์
+        console.error('โครงสร้างข้อมูลจาก backend ไม่ถูกต้อง:', result)
+        throw new Error('โครงสร้างข้อมูลจากเซิร์ฟเวอร์ไม่ถูกต้อง')
+      } // เพิ่มเวลาเป็น 10 วินาที เพื่อให้ผู้ใช้ได้เห็นผลลัพธ์
 
     } catch (error) {
       console.error('Upload error:', error)

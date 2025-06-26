@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import PDFDocument from 'pdfkit'
-import path from 'path'
-import fs from 'fs'
 
 // ฟังก์ชันสำหรับประมวลผล PDF ด้วย Gemini
 async function processPdfWithGemini(pdfFile: File) {
@@ -81,7 +78,6 @@ async function processPdfWithGemini(pdfFile: File) {
                 read_analyze_write_valid: Boolean(jsonResult.read_analyze_write_valid)
             }
 
-            console.log('Processed OCR result:', processedResult)
             return processedResult
 
         } catch (parseError) {
@@ -207,196 +203,49 @@ export async function POST(request: NextRequest) {
         // บันทึกข้อมูลลงฐานข้อมูล (ถ้าต้องการ)
         // TODO: บันทึกข้อมูลลง MongoDB ผ่าน Prisma
 
-        // สร้าง PDF รายงาน
-        let doc: any
-
-        // กำหนด path ของ font ก่อนสร้าง document
-        const fontPath = path.join(process.cwd(), 'public', 'fonts', 'THSarabun.ttf')
-        const fontBoldPath = path.join(process.cwd(), 'public', 'fonts', 'THSarabun Bold.ttf')
-
-        try {
-            // สร้าง PDF แบบง่ายที่สุดเพื่อหลีกเลี่ยงปัญหา font
-            doc = new PDFDocument({
-                bufferPages: true,
-                autoFirstPage: false // ไม่สร้างหน้าแรกอัตโนมัติ
-            })
-
-            // สร้างหน้าแรกด้วยตัวเอง
-            doc.addPage({
-                size: 'A4',
-                margins: {
-                    top: 50,
-                    bottom: 50,
-                    left: 50,
-                    right: 50
-                }
-            })
-
-            // ลงทะเบียน font หลังจากสร้าง document แล้ว
-            if (fs.existsSync(fontPath)) {
-                doc.registerFont('THSarabun', fontPath)
-                console.log('✅ ลงทะเบียน THSarabun font สำเร็จ')
-            }
-            if (fs.existsSync(fontBoldPath)) {
-                doc.registerFont('THSarabunBold', fontBoldPath)
-                console.log('✅ ลงทะเบียน THSarabun Bold font สำเร็จ')
-            }
-
-        } catch (error) {
-            console.log('PDFKit initialization error:', error)
-            // สร้าง PDF แบบพื้นฐานที่สุด
-            try {
-                doc = new PDFDocument()
-                console.log('✅ สร้าง PDF ด้วยการตั้งค่าพื้นฐาน')
-            } catch (fallbackError) {
-                console.error('❌ ไม่สามารถสร้าง PDF ได้:', fallbackError)
-                throw new Error('ไม่สามารถสร้าง PDF ได้')
+        // สร้างข้อมูลสำหรับรายงาน
+        const reportData = {
+            // ข้อมูลจากฟอร์ม
+            formData: {
+                academicYear,
+                semester,
+                submittedAt: new Date().toISOString(),
+                timestamp: new Date().toLocaleString('th-TH')
+            },
+            // ข้อมูลจากไฟล์ Excel
+            excelData: excelData && Object.keys(excelData).length > 0 ? {
+                hasData: true,
+                sheetName: 'check',
+                data: excelData,
+                totalFields: Object.keys(excelData).length
+            } : {
+                hasData: false,
+                message: 'ไม่พบข้อมูลในชีท "check" หรือชีทว่าง'
+            },
+            // ข้อมูลจาก PDF OCR (Gemini)
+            geminiOcrResult: pdfOcrResult ? {
+                hasData: true,
+                data: pdfOcrResult,
+                processedAt: new Date().toLocaleString('th-TH')
+            } : {
+                hasData: false,
+                message: 'ไม่มีการส่งไฟล์ PDF หรือไม่สามารถประมวลผลได้'
+            },
+            // สรุปผลการประมวลผล
+            summary: {
+                success: true,
+                message: 'ประมวลผลไฟล์สำเร็จ',
+                hasExcelData: excelData && Object.keys(excelData).length > 0,
+                hasPdfData: !!pdfOcrResult,
+                totalDataSources: (excelData && Object.keys(excelData).length > 0 ? 1 : 0) + (pdfOcrResult ? 1 : 0)
             }
         }
 
-        // สร้าง buffer สำหรับเก็บ PDF
-        const buffers: Buffer[] = []
-        doc.on('data', buffers.push.bind(buffers))
+        console.log('\n=== ข้อมูลรายงานที่จะส่งกลับ ===')
+        console.log(reportData)
 
-        // หัวเอกสาร
-        try {
-            doc.font('THSarabunBold')
-        } catch (error) {
-            console.log('Font setting error, using default font:', error)
-            try {
-                doc.font('THSarabun')
-            } catch (fallbackError) {
-                console.log('THSarabun font not available, using default')
-            }
-        }
-
-        doc.fontSize(20)
-            .text('รายงานสรุปผลการตรวจสอบ ปพ.5', {
-                align: 'center'
-            })
-            .moveDown()
-
-        // ข้อมูลทั่วไป
-        try {
-            doc.font('THSarabun')
-        } catch (error) {
-            console.log('Font setting error for regular text, using default font')
-        }
-
-        doc.fontSize(14)
-            .text(`ปีการศึกษา: ${academicYear}`, 50, doc.y)
-            .text(`ภาคเรียน: ${semester}`, 50, doc.y + 5)
-            .moveDown()
-
-        // หากมีข้อมูลจาก PDF OCR
-        if (pdfOcrResult) {
-            try {
-                doc.font('THSarabunBold')
-            } catch (error) {
-                console.log('Font setting error for section header')
-            }
-
-            doc.fontSize(16)
-                .text('ข้อมูลรายวิชา', { underline: true })
-                .moveDown(0.5)
-
-            try {
-                doc.font('THSarabun')
-            } catch (error) {
-                console.log('Font setting error for content')
-            }
-
-            doc.fontSize(12)
-                .text(`รหัสวิชา: ${pdfOcrResult.course_id}`)
-                .text(`ชื่อวิชา: ${pdfOcrResult.course_name}`)
-                .text(`ระดับชั้น: ${pdfOcrResult.grade_level}`)
-                .text(`กลุ่มเรียน: ${pdfOcrResult.section}`)
-                .text(`ครูผู้สอน: ${pdfOcrResult.teacher}`)
-                .moveDown()
-
-            // ผลการตรวจสอบมาตรฐาน
-            try {
-                doc.font('THSarabunBold')
-            } catch (error) {
-                console.log('Font setting error for standards header')
-            }
-
-            doc.fontSize(16)
-                .text('ผลการตรวจสอบมาตรฐาน', { underline: true })
-                .moveDown(0.5)
-
-            const checkMark = pdfOcrResult.grade_valid ? '✓' : '✗'
-            const attitudeCheck = pdfOcrResult.attitude_valid ? '✓' : '✗'
-            const readCheck = pdfOcrResult.read_analyze_write_valid ? '✓' : '✗'
-
-            try {
-                doc.font('THSarabun')
-            } catch (error) {
-                console.log('Font setting error for standards content')
-            }
-
-            doc.fontSize(12)
-                .text(`${checkMark} ผลการเรียน (≥70% ของนักเรียนมีผลมากกว่า 0): ${pdfOcrResult.grade_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`)
-                .text(`${attitudeCheck} คุณลักษณะอันพึงประสงค์ (≥80% ของนักเรียนมีผลมากกว่า 0): ${pdfOcrResult.attitude_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`)
-                .text(`${readCheck} อ่าน วิเคราะห์ เขียน (≥80% ของนักเรียนมีผลมากกว่า 0): ${pdfOcrResult.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`)
-                .moveDown()
-        }
-
-        // หากมีข้อมูลจาก Excel
-        if (excelData && Object.keys(excelData).length > 0) {
-            try {
-                doc.font('THSarabunBold')
-            } catch (error) {
-                console.log('Font setting error for Excel header')
-            }
-
-            doc.fontSize(16)
-                .text('ข้อมูลจากไฟล์ Excel (ชีท "check")', { underline: true })
-                .moveDown(0.5)
-
-            try {
-                doc.font('THSarabun')
-            } catch (error) {
-                console.log('Font setting error for Excel content')
-            }
-
-            doc.fontSize(12)
-            Object.entries(excelData).forEach(([key, value]) => {
-                doc.text(`${key}: ${value}`)
-            })
-            doc.moveDown()
-        }
-
-        // ส่วนท้าย
-        try {
-            doc.font('THSarabun')
-        } catch (error) {
-            console.log('Font setting error for footer')
-        }
-
-        doc.fontSize(10)
-            .text(`สร้างเมื่อ: ${new Date().toLocaleString('th-TH')}`, {
-                align: 'right'
-            })
-
-        // จบการสร้าง PDF
-        doc.end()
-
-        // รอให้ PDF สร้างเสร็จแล้วส่งกลับ
-        return new Promise<NextResponse>((resolve) => {
-            doc.on('end', () => {
-                const pdfBuffer = Buffer.concat(buffers)
-
-                resolve(new NextResponse(pdfBuffer, {
-                    status: 200,
-                    headers: {
-                        'Content-Type': 'application/pdf',
-                        'Content-Disposition': `attachment; filename="report-pp5-${academicYear}-${semester}.pdf"`,
-                        'Content-Length': pdfBuffer.length.toString()
-                    }
-                }))
-            })
-        })
+        // ส่งข้อมูลกลับเป็น JSON
+        return NextResponse.json(reportData, { status: 200 })
 
     } catch (error) {
         console.error('Upload error:', error)
