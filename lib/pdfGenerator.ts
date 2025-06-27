@@ -188,7 +188,40 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             pdf.setFont(hasThaiFont ? 'THSarabun' : 'helvetica', style)
         }
 
-        // เพิ่มโลโก้ที่ส่วนหัว
+        // กำหนดขอบกระดาษทั้ง 4 ด้าน (หน่วย: mm)
+        const margins = {
+            top: 10,
+            right: 15,
+            bottom: 15,
+            left: 15
+        }
+
+        // สร้างตารางส่วนหัว 2 แถว 3 คอลลัมน์
+        const pageWidth = pdf.internal.pageSize.getWidth()
+        const tableStartX = margins.left
+        const tableStartY = margins.top
+        const tableWidth = pageWidth - margins.left - margins.right // ความกว้างตารางพอดีกับขอบ
+        const tableHeight = 40
+        const cellWidth = tableWidth / 3 // แบ่งเป็น 3 คอลลัมน์เท่า ๆ กัน
+        const cellHeight = tableHeight / 2 // แบ่งเป็น 2 แถวเท่า ๆ กัน
+
+        // วาดกรอบตาราง
+        pdf.setDrawColor(0, 0, 0) // สีดำ
+        pdf.setLineWidth(0.5)
+
+        // วาดเส้นแนวนอน
+        for (let i = 0; i <= 2; i++) {
+            const y = tableStartY + (i * cellHeight)
+            pdf.line(tableStartX, y, tableStartX + tableWidth, y)
+        }
+
+        // วาดเส้นแนวตั้ง
+        for (let i = 0; i <= 3; i++) {
+            const x = tableStartX + (i * cellWidth)
+            pdf.line(x, tableStartY, x, tableStartY + tableHeight)
+        }
+
+        // เพิ่มโลโก้ในเซลล์ (1,1) - แถวแรก คอลลัมน์แรก
         try {
             const logoResponse = await fetch('/logo-ppk-512x512-1.png')
             if (logoResponse.ok) {
@@ -198,14 +231,13 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 )
                 const logoDataURL = `data:image/png;base64,${logoBase64}`
 
-                // คำนวณตำแหน่งกึ่งกลางสำหรับโลโก้
-                const pageWidth = pdf.internal.pageSize.getWidth()
-                const logoSize = 20 // ขนาดโลโก้ 20mm
-                const logoX = (pageWidth - logoSize) / 2 // จัดกึ่งกลาง
-                const logoY = 10 // ห่างจากขอบบน 10mm
+                // คำนวณตำแหน่งกึ่งกลางของเซลล์ (1,1)
+                const logoSize = 15 // ขนาดโลโก้ 15mm
+                const logoX = tableStartX + (cellWidth - logoSize) / 2 // จัดกึ่งกลางในเซลล์แรก
+                const logoY = tableStartY + (cellHeight - logoSize) / 2 // จัดกึ่งกลางในแถวแรก
 
                 pdf.addImage(logoDataURL, 'PNG', logoX, logoY, logoSize, logoSize)
-                console.log('✅ เพิ่มโลโก้ในส่วนหัวสำเร็จ')
+                console.log('✅ เพิ่มโลโก้ในเซลล์ (1,1) สำเร็จ')
             } else {
                 console.warn('⚠️ ไม่สามารถโหลดโลโก้ได้')
             }
@@ -213,18 +245,21 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             console.warn('⚠️ ข้อผิดพลาดในการโหลดโลโก้:', logoError)
         }
 
-        // หัวเอกสาร (ปรับตำแหน่งให้อยู่ใต้โลโก้)
+        // เพิ่มข้อความรายงานในเซลล์ (1,2) - แถวแรก คอลลัมน์ที่สอง
         setFont('bold')
-        pdf.setFontSize(20)
-        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', 105, 35, { align: 'center' }) // เปลี่ยนจาก 30 เป็น 40
+        pdf.setFontSize(16)
+        const textX = tableStartX + cellWidth + (cellWidth / 2) // กึ่งกลางของคอลลัมน์ที่ 2
+        const textY = tableStartY + (cellHeight / 2) + 3 // กึ่งกลางของแถวแรก (เพิ่ม 3 เพื่อปรับตำแหน่งให้ดี)
+        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })
 
-        // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้หัวเอกสาร)
+        // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้ตาราง)
         setFont('normal')
         pdf.setFontSize(14)
-        pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, 20, 60) // เปลี่ยนจาก 50 เป็น 60
-        pdf.text(`ภาคเรียน: ${data.formData.semester}`, 20, 75) // เปลี่ยนจาก 65 เป็น 75
+        const contentStartY = tableStartY + tableHeight + 10 // เริ่มเนื้อหา 10mm ใต้ตาราง
+        pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, margins.left, contentStartY)
+        pdf.text(`ภาคเรียน: ${data.formData.semester}`, margins.left, contentStartY + 15)
 
-        let yPosition = 95 // เปลี่ยนจาก 85 เป็น 95
+        let yPosition = contentStartY + 35 // เริ่มเนื้อหาหลัก
 
         // ข้อมูลจาก PDF OCR (Gemini)
         if (data.geminiOcrResult.hasData && data.geminiOcrResult.data) {
@@ -232,30 +267,30 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
 
             setFont('bold')
             pdf.setFontSize(16)
-            pdf.text('ข้อมูลรายวิชา (จาก PDF)', 20, yPosition)
+            pdf.text('ข้อมูลรายวิชา (จาก PDF)', margins.left, yPosition)
             yPosition += 15
 
             setFont('normal')
             pdf.setFontSize(12)
-            pdf.text(`รหัสวิชา: ${ocrData.course_id || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`รหัสวิชา: ${ocrData.course_id || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`ชื่อวิชา: ${ocrData.course_name || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`ชื่อวิชา: ${ocrData.course_name || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`ปีการศึกษา: ${ocrData.academic_year || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`ปีการศึกษา: ${ocrData.academic_year || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`เทอม: ${ocrData.semester || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`เทอม: ${ocrData.semester || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`ระดับชั้น: ${ocrData.grade_level || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`ระดับชั้น: ${ocrData.grade_level || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`กลุ่มเรียน: ${ocrData.section || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`กลุ่มเรียน: ${ocrData.section || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`ครูผู้สอน: ${ocrData.teacher || 'ไม่มีข้อมูล'}`, 20, yPosition)
+            pdf.text(`ครูผู้สอน: ${ocrData.teacher || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
             yPosition += 20
 
             // ผลการตรวจสอบมาตรฐาน
             setFont('bold')
             pdf.setFontSize(16)
-            pdf.text('ผลการตรวจสอบมาตรฐาน', 20, yPosition)
+            pdf.text('ผลการตรวจสอบมาตรฐาน', margins.left, yPosition)
             yPosition += 15
 
             setFont('normal')
@@ -264,16 +299,16 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             const attitudeCheck = ocrData.attitude_valid ? '✓' : '✗'
             const readCheck = ocrData.read_analyze_write_valid ? '✓' : '✗'
 
-            pdf.text(`${gradeCheck} ผลการเรียน (≥70%): ${ocrData.grade_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, 20, yPosition)
+            pdf.text(`${gradeCheck} ผลการเรียน (≥70%): ${ocrData.grade_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`${attitudeCheck} คุณลักษณะอันพึงประสงค์ (≥80%): ${ocrData.attitude_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, 20, yPosition)
+            pdf.text(`${attitudeCheck} คุณลักษณะอันพึงประสงค์ (≥80%): ${ocrData.attitude_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
             yPosition += 10
-            pdf.text(`${readCheck} อ่าน วิเคราะห์ เขียน (≥80%): ${ocrData.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, 20, yPosition)
+            pdf.text(`${readCheck} อ่าน วิเคราะห์ เขียน (≥80%): ${ocrData.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
             yPosition += 20
         } else {
             setFont('normal')
             pdf.setFontSize(14)
-            pdf.text('ข้อมูลจาก PDF: ไม่มีข้อมูลหรือไม่สามารถประมวลผลได้', 20, yPosition)
+            pdf.text('ข้อมูลจาก PDF: ไม่มีข้อมูลหรือไม่สามารถประมวลผลได้', margins.left, yPosition)
             yPosition += 20
         }
 
@@ -281,7 +316,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         if (data.excelData.hasData && data.excelData.data) {
             setFont('bold')
             pdf.setFontSize(16)
-            pdf.text(`ข้อมูลจากไฟล์ Excel (ชีท "${data.excelData.sheetName}")`, 20, yPosition)
+            pdf.text(`ข้อมูลจากไฟล์ Excel (ชีท "${data.excelData.sheetName}")`, margins.left, yPosition)
             yPosition += 15
 
             setFont('normal')
@@ -290,54 +325,54 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 // เช็คว่าเกินหน้า ต้องเพิ่มหน้าใหม่หรือไม่
                 if (yPosition > 270) {
                     pdf.addPage()
-                    yPosition = 20
+                    yPosition = margins.top + 10
                 }
 
                 // แปลงค่า value ให้เป็น string
                 const displayValue = value !== null && value !== undefined ? String(value) : 'ไม่มีข้อมูล'
-                pdf.text(`${key}: ${displayValue}`, 20, yPosition)
+                pdf.text(`${key}: ${displayValue}`, margins.left, yPosition)
                 yPosition += 8
             })
             yPosition += 15
         } else {
             setFont('normal')
             pdf.setFontSize(14)
-            pdf.text('ข้อมูลจาก Excel: ไม่มีข้อมูลในชีท "check" หรือไม่สามารถอ่านได้', 20, yPosition)
+            pdf.text('ข้อมูลจาก Excel: ไม่มีข้อมูลในชีท "check" หรือไม่สามารถอ่านได้', margins.left, yPosition)
             yPosition += 20
         }
 
         // สรุปผลการประมวลผล
         if (yPosition > 250) {
             pdf.addPage()
-            yPosition = 20
+            yPosition = margins.top + 10
         }
 
         setFont('bold')
         pdf.setFontSize(16)
-        pdf.text('สรุปผลการประมวลผล', 20, yPosition)
+        pdf.text('สรุปผลการประมวลผล', margins.left, yPosition)
         yPosition += 15
 
         setFont('normal')
         pdf.setFontSize(12)
-        pdf.text(`สถานะ: ${data.summary.success ? 'สำเร็จ' : 'ล้มเหลว'}`, 20, yPosition)
+        pdf.text(`สถานะ: ${data.summary.success ? 'สำเร็จ' : 'ล้มเหลว'}`, margins.left, yPosition)
         yPosition += 10
-        pdf.text(`จำนวนแหล่งข้อมูล: ${data.summary.totalDataSources} แหล่ง`, 20, yPosition)
+        pdf.text(`จำนวนแหล่งข้อมูล: ${data.summary.totalDataSources} แหล่ง`, margins.left, yPosition)
         yPosition += 10
-        pdf.text(`มีข้อมูล Excel: ${data.summary.hasExcelData ? 'มี' : 'ไม่มี'}`, 20, yPosition)
+        pdf.text(`มีข้อมูล Excel: ${data.summary.hasExcelData ? 'มี' : 'ไม่มี'}`, margins.left, yPosition)
         yPosition += 10
-        pdf.text(`มีข้อมูล PDF: ${data.summary.hasPdfData ? 'มี' : 'ไม่มี'}`, 20, yPosition)
+        pdf.text(`มีข้อมูล PDF: ${data.summary.hasPdfData ? 'มี' : 'ไม่มี'}`, margins.left, yPosition)
         yPosition += 20
 
         // แสดงข้อมูลครูที่รับผิดชอบ (จาก Excel home_teacher)
         if (data.excelData.hasData && data.excelData.data?.home_teacher) {
             setFont('bold')
             pdf.setFontSize(14)
-            pdf.text('ข้อมูลผู้รับผิดชอบ', 20, yPosition)
+            pdf.text('ข้อมูลผู้รับผิดชอบ', margins.left, yPosition)
             yPosition += 12
 
             setFont('normal')
             pdf.setFontSize(12)
-            pdf.text(`ครูที่รับผิดชอบ: ${data.excelData.data.home_teacher}`, 20, yPosition)
+            pdf.text(`ครูที่รับผิดชอบ: ${data.excelData.data.home_teacher}`, margins.left, yPosition)
             yPosition += 20
         }
 
@@ -345,24 +380,24 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         if (data.database) {
             setFont('bold')
             pdf.setFontSize(14)
-            pdf.text('ข้อมูลการบันทึก', 20, yPosition)
+            pdf.text('ข้อมูลการบันทึก', margins.left, yPosition)
             yPosition += 12
 
             setFont('normal')
             pdf.setFontSize(10)
-            pdf.text(`Record ID: ${data.database.recordId}`, 20, yPosition)
+            pdf.text(`Record ID: ${data.database.recordId}`, margins.left, yPosition)
             yPosition += 8
-            pdf.text(`UUID: ${data.database.uuid}`, 20, yPosition)
+            pdf.text(`UUID: ${data.database.uuid}`, margins.left, yPosition)
             yPosition += 8
-            pdf.text(`บันทึกเมื่อ: ${new Date(data.database.savedAt).toLocaleString('th-TH')}`, 20, yPosition)
+            pdf.text(`บันทึกเมื่อ: ${new Date(data.database.savedAt).toLocaleString('th-TH')}`, margins.left, yPosition)
             yPosition += 15
         }
 
         // ส่วนท้าย
         setFont('normal')
         pdf.setFontSize(10)
-        pdf.text(`สร้างเมื่อ: ${data.formData.timestamp}`, 20, yPosition)
-        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, 20, yPosition + 10)
+        pdf.text(`สร้างเมื่อ: ${data.formData.timestamp}`, margins.left, yPosition)
+        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, margins.left, yPosition + 10)
 
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
