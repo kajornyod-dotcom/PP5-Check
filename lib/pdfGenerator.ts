@@ -188,18 +188,43 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             pdf.setFont(hasThaiFont ? 'THSarabun' : 'helvetica', style)
         }
 
-        // หัวเอกสาร
+        // เพิ่มโลโก้ที่ส่วนหัว
+        try {
+            const logoResponse = await fetch('/logo-ppk-512x512-1.png')
+            if (logoResponse.ok) {
+                const logoArrayBuffer = await logoResponse.arrayBuffer()
+                const logoBase64 = btoa(
+                    new Uint8Array(logoArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                )
+                const logoDataURL = `data:image/png;base64,${logoBase64}`
+
+                // คำนวณตำแหน่งกึ่งกลางสำหรับโลโก้
+                const pageWidth = pdf.internal.pageSize.getWidth()
+                const logoSize = 20 // ขนาดโลโก้ 20mm
+                const logoX = (pageWidth - logoSize) / 2 // จัดกึ่งกลาง
+                const logoY = 10 // ห่างจากขอบบน 10mm
+
+                pdf.addImage(logoDataURL, 'PNG', logoX, logoY, logoSize, logoSize)
+                console.log('✅ เพิ่มโลโก้ในส่วนหัวสำเร็จ')
+            } else {
+                console.warn('⚠️ ไม่สามารถโหลดโลโก้ได้')
+            }
+        } catch (logoError) {
+            console.warn('⚠️ ข้อผิดพลาดในการโหลดโลโก้:', logoError)
+        }
+
+        // หัวเอกสาร (ปรับตำแหน่งให้อยู่ใต้โลโก้)
         setFont('bold')
         pdf.setFontSize(20)
-        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', 105, 30, { align: 'center' })
+        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', 105, 35, { align: 'center' }) // เปลี่ยนจาก 30 เป็น 40
 
-        // ข้อมูลทั่วไป
+        // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้หัวเอกสาร)
         setFont('normal')
         pdf.setFontSize(14)
-        pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, 20, 50)
-        pdf.text(`ภาคเรียน: ${data.formData.semester}`, 20, 65)
+        pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, 20, 60) // เปลี่ยนจาก 50 เป็น 60
+        pdf.text(`ภาคเรียน: ${data.formData.semester}`, 20, 75) // เปลี่ยนจาก 65 เป็น 75
 
-        let yPosition = 85
+        let yPosition = 95 // เปลี่ยนจาก 85 เป็น 95
 
         // ข้อมูลจาก PDF OCR (Gemini)
         if (data.geminiOcrResult.hasData && data.geminiOcrResult.data) {
