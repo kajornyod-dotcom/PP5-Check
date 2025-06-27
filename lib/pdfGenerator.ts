@@ -1,4 +1,76 @@
 import jsPDF from 'jspdf'
+import QRCode from 'qrcode'
+
+// ฟังก์ชันสำหรับสร้าง QR Code
+const generateQRCode = async (text: string): Promise<string> => {
+    try {
+        const qrCodeDataURL = await QRCode.toDataURL(text, {
+            width: 200, // เพิ่มขนาดเพื่อความชัดเจน
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            },
+            errorCorrectionLevel: 'M' // ระดับการแก้ไขข้อผิดพลาดปานกลาง
+        })
+        return qrCodeDataURL
+    } catch (error) {
+        console.error('ข้อผิดพลาดในการสร้าง QR Code:', error)
+        throw error
+    }
+}
+
+// ฟังก์ชันสำหรับเพิ่ม QR Code ในทุกหน้าของ PDF
+const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
+    try {
+        console.log('🔍 กำลังสร้าง QR Code สำหรับ UUID:', uuid)
+
+        // สร้าง QR Code จาก UUID
+        const qrCodeDataURL = await generateQRCode(uuid)
+
+        // ได้จำนวนหน้าทั้งหมด
+        const totalPages = (pdf as any).internal.pages.length - 1 // หักหน้าแรกที่เป็น template
+
+        // วนลูปเพิ่ม QR Code ในทุกหน้า
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            pdf.setPage(pageNum)
+
+            // ได้ขนาดหน้ากระดาษ A4 (210 x 297 mm)
+            const pageWidth = pdf.internal.pageSize.getWidth()
+            const pageHeight = pdf.internal.pageSize.getHeight()
+
+            // กำหนดขนาดและตำแหน่งของ QR Code
+            const qrSize = 25 // ขนาด QR Code (mm)
+            const qrX = pageWidth - qrSize - 10 // 10mm จากขอบขวา
+            const qrY = pageHeight - qrSize - 10 // 10mm จากขอบล่าง
+
+            // เพิ่ม QR Code ลงใน PDF
+            pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
+
+            // เพิ่มข้อความอธิบาย QR Code (เฉพาะหน้าแรก)
+            if (pageNum === 1) {
+                pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
+                pdf.setFontSize(7)
+                pdf.text('UUID:', qrX, qrY - 3)
+                pdf.text(uuid.substring(0, 15) + '...', qrX, qrY - 0.5)
+            }
+        }
+
+        console.log(`✅ เพิ่ม QR Code ลงใน PDF สำเร็จ (${totalPages} หน้า)`)
+
+    } catch (qrError) {
+        console.warn('⚠️ ไม่สามารถสร้าง QR Code ได้:', qrError)
+
+        // ถ้าสร้าง QR Code ไม่ได้ ให้แสดง UUID เป็นข้อความในหน้าแรกแทน
+        pdf.setPage(1)
+        pdf.setFont('helvetica')
+        pdf.setFontSize(8)
+        const pageWidth = pdf.internal.pageSize.getWidth()
+        const pageHeight = pdf.internal.pageSize.getHeight()
+        pdf.text('UUID:', pageWidth - 60, pageHeight - 15)
+        pdf.text(uuid, pageWidth - 60, pageHeight - 10)
+    }
+}
 
 // ฟังก์ชันสำหรับโหลดฟอนต์ TH Sarabun
 const loadThaiFont = async (fontPath: string): Promise<string> => {
@@ -62,11 +134,18 @@ interface Summary {
     totalDataSources: number
 }
 
+interface DatabaseInfo {
+    recordId: string
+    uuid: string
+    savedAt: string
+}
+
 interface ReportData {
     formData: FormData
     excelData: ExcelData
     geminiOcrResult: GeminiOcrResult
     summary: Summary
+    database?: DatabaseInfo
 }
 
 /**
@@ -223,10 +302,50 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.text(`มีข้อมูล PDF: ${data.summary.hasPdfData ? 'มี' : 'ไม่มี'}`, 20, yPosition)
         yPosition += 20
 
+        // ข้อมูลฐานข้อมูล (ถ้ามี)
+        if (data.database) {
+            setFont('bold')
+            pdf.setFontSize(14)
+            pdf.text('ข้อมูลการบันทึก', 20, yPosition)
+            yPosition += 12
+
+            setFont('normal')
+            pdf.setFontSize(10)
+            pdf.text(`Record ID: ${data.database.recordId}`, 20, yPosition)
+            yPosition += 8
+            pdf.text(`UUID: ${data.database.uuid}`, 20, yPosition)
+            yPosition += 8
+            pdf.text(`บันทึกเมื่อ: ${new Date(data.database.savedAt).toLocaleString('th-TH')}`, 20, yPosition)
+            yPosition += 15
+        }
+
         // ส่วนท้าย
+        setFont('normal')
         pdf.setFontSize(10)
         pdf.text(`สร้างเมื่อ: ${data.formData.timestamp}`, 20, yPosition)
-        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, 20, yPosition + 10)        // สร้างชื่อไฟล์
+        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, 20, yPosition + 10)
+
+        // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
+        if (data.database?.uuid) {
+            try {
+                console.log('🔍 กำลังเพิ่ม QR Code ลงในทุกหน้า PDF สำหรับ UUID:', data.database.uuid)
+                await addQRCodeToAllPages(pdf, data.database.uuid)
+                console.log('✅ เพิ่ม QR Code ลงในทุกหน้า PDF สำเร็จ')
+
+            } catch (qrError) {
+                console.warn('⚠️ ไม่สามารถสร้าง QR Code ได้:', qrError)
+
+                // ถ้าสร้าง QR Code ไม่ได้ ให้แสดง UUID เป็นข้อความที่หน้าสุดท้ายแทน
+                const totalPages = pdf.getNumberOfPages()
+                pdf.setPage(totalPages)
+                setFont('normal')
+                pdf.setFontSize(8)
+                const pageWidth = pdf.internal.pageSize.getWidth()
+                const pageHeight = pdf.internal.pageSize.getHeight()
+                pdf.text('UUID:', pageWidth - 60, pageHeight - 15)
+                pdf.text(data.database.uuid, pageWidth - 60, pageHeight - 10)
+            }
+        }        // สร้างชื่อไฟล์
         const filename = `report-pp5-${data.formData.academicYear}-${data.formData.semester}-${Date.now()}.pdf`
 
         // สร้าง Blob จาก PDF และเปิดในแทบใหม่

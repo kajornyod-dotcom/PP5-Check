@@ -12,9 +12,11 @@
     "@google/generative-ai": "^0.24.1",
     "@playwright/test": "^1.53.1",
     "@prisma/client": "^6.10.1",
+    "@types/qrcode": "^1.5.5",
     "jspdf": "^3.0.1",
     "next": "15.3.4",
     "prisma": "^6.10.1",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "xlsx": "^0.18.5"

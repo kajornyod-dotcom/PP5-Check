@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { prisma } from '@/lib/prisma'
 
 // ฟังก์ชันสำหรับประมวลผล PDF ด้วย Gemini
 async function processPdfWithGemini(pdfFile: File) {
@@ -200,9 +201,6 @@ export async function POST(request: NextRequest) {
             console.log('ชีทที่มี:', workbook.SheetNames)
         }
 
-        // บันทึกข้อมูลลงฐานข้อมูล (ถ้าต้องการ)
-        // TODO: บันทึกข้อมูลลง MongoDB ผ่าน Prisma
-
         // สร้างข้อมูลสำหรับรายงาน
         const reportData = {
             // ข้อมูลจากฟอร์ม
@@ -244,11 +242,104 @@ export async function POST(request: NextRequest) {
         console.log('\n=== ข้อมูลรายงานที่จะส่งกลับ ===')
         console.log(reportData)
 
+        // บันทึกข้อมูลลงฐานข้อมูลก่อนส่ง response
+        let savedRecord = null
+        try {
+            console.log('\n=== กำลังบันทึกข้อมูลลงฐานข้อมูล ===')
+
+            // ดึง IP address และ User Agent
+            const submitterIp = request.headers.get('x-forwarded-for') ||
+                request.headers.get('x-real-ip') ||
+                'unknown'
+            const userAgent = request.headers.get('user-agent') || 'unknown'
+
+            savedRecord = await prisma.ppkPp5Submit.create({
+                data: {
+                    uploaderName: 'Anonymous', // สามารถปรับเป็นชื่อผู้ใช้จริงได้ในอนาคต
+                    academicYear,
+                    semester,
+                    xlsxFileName: xlsxFile.name,
+                    xlsxFileSize: xlsxFile.size,
+                    pdfFileName: pdfFile?.name || null,
+                    pdfFileSize: pdfFile?.size || null,
+                    status: 'PROCESSING', // เปลี่ยนเป็น PROCESSING ก่อน
+                    backendResponse: reportData,
+                    submitterIp,
+                    userAgent
+                }
+            })
+
+            console.log('✅ บันทึกข้อมูลลงฐานข้อมูลสำเร็จ - ID:', savedRecord.id)
+            console.log('✅ UUID สำหรับ QR Code:', savedRecord.uuid)
+
+            // อัปเดต status เป็น COMPLETED หลังจากบันทึกสำเร็จ
+            await prisma.ppkPp5Submit.update({
+                where: { id: savedRecord.id },
+                data: {
+                    status: 'COMPLETED',
+                    processedAt: new Date()
+                }
+            })
+
+        } catch (dbError) {
+            console.error('❌ เกิดข้อผิดพลาดในการบันทึกลงฐานข้อมูล:', dbError)
+            // throw error เพื่อไม่ให้ส่ง response หากบันทึกไม่สำเร็จ
+            throw new Error('ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้')
+        }
+
+        // เตรียม response data สำหรับส่งกลับพร้อม UUID สำหรับ QR Code
+        const finalReportData = {
+            ...reportData,
+            // เพิ่มข้อมูล database record ID และ UUID สำหรับ QR Code
+            database: {
+                recordId: savedRecord.id,
+                uuid: savedRecord.uuid, // สำคัญ: UUID สำหรับสร้าง QR Code
+                savedAt: savedRecord.submittedAt.toISOString()
+            }
+        }
+
+        console.log('✅ เตรียมส่ง UUID สำหรับ QR Code:', savedRecord.uuid)
+
         // ส่งข้อมูลกลับเป็น JSON
-        return NextResponse.json(reportData, { status: 200 })
+        return NextResponse.json(finalReportData, { status: 200 })
 
     } catch (error) {
         console.error('Upload error:', error)
+
+        // พยายามบันทึกข้อผิดพลาดลงฐานข้อมูล
+        try {
+            const submitterIp = request.headers.get('x-forwarded-for') ||
+                request.headers.get('x-real-ip') ||
+                'unknown'
+            const userAgent = request.headers.get('user-agent') || 'unknown'
+
+            const data = await request.formData()
+            const academicYear = data.get('academicYear') as string
+            const semester = data.get('semester') as string
+            const xlsxFile = data.get('file_xlsx') as File
+            const pdfFile = data.get('file_pdf') as File | null
+
+            await prisma.ppkPp5Submit.create({
+                data: {
+                    uploaderName: 'Anonymous',
+                    academicYear: academicYear || 'unknown',
+                    semester: semester || 'unknown',
+                    xlsxFileName: xlsxFile?.name || 'unknown',
+                    xlsxFileSize: xlsxFile?.size || 0,
+                    pdfFileName: pdfFile?.name || null,
+                    pdfFileSize: pdfFile?.size || null,
+                    status: 'FAILED',
+                    errorMessage: error instanceof Error ? error.message : 'Unknown error',
+                    submitterIp,
+                    userAgent
+                }
+            })
+
+            console.log('✅ บันทึกข้อผิดพลาดลงฐานข้อมูลสำเร็จ')
+        } catch (dbError) {
+            console.error('❌ ไม่สามารถบันทึกข้อผิดพลาดลงฐานข้อมูลได้:', dbError)
+        }
+
         return NextResponse.json(
             {
                 error: 'Internal server error',
