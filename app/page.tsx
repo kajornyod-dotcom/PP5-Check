@@ -269,7 +269,7 @@ export default function Home() {
       // ตรวจสอบโครงสร้างข้อมูลและสร้าง PDF
       if (validateReportData(result)) {
         try {
-          generatePDF(result)
+          await generatePDF(result)
 
           // Reset form on success
           setAcademicYear('')
@@ -290,7 +290,7 @@ export default function Home() {
           // Show success message in panel
           updatePanelContent('success', 'ส่งข้อมูลสำเร็จ!', [
             'ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์เรียบร้อยแล้ว',
-            'รายงาน PDF ได้ถูกสร้างและเปิดในแทบใหม่แล้ว',
+            'รายงาน PDF ได้ถูกสร้างด้วยฟอนต์ไทยและเปิดในแทบใหม่แล้ว',
             'หากไม่สามารถเปิดแทบใหม่ได้ PDF จะถูกดาวน์โหลดอัตโนมัติ',
             'คุณสามารถส่งไฟล์ใหม่ได้อีกครั้ง'
           ])

@@ -1,5 +1,23 @@
 import jsPDF from 'jspdf'
 
+// ฟังก์ชันสำหรับโหลดฟอนต์ TH Sarabun
+const loadThaiFont = async (fontPath: string): Promise<string> => {
+    try {
+        const response = await fetch(fontPath)
+        if (!response.ok) {
+            throw new Error(`ไม่สามารถโหลดฟอนต์ ${fontPath} ได้`)
+        }
+        const arrayBuffer = await response.arrayBuffer()
+        const base64String = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        )
+        return base64String
+    } catch (error) {
+        console.error('ข้อผิดพลาดในการโหลดฟอนต์:', error)
+        throw error
+    }
+}
+
 // Type definitions สำหรับข้อมูลที่ backend ส่งกลับ
 interface FormData {
     academicYear: string
@@ -56,18 +74,47 @@ interface ReportData {
  * จะเปิด PDF ในแทบใหม่ และถ้าไม่สามารถเปิดได้จะดาวน์โหลดอัตโนมัติ
  * @param data ข้อมูลที่ได้รับจาก backend API
  */
-export const generatePDF = (data: ReportData): void => {
+export const generatePDF = async (data: ReportData): Promise<void> => {
     try {
         const pdf = new jsPDF()
 
-        // ตั้งค่า font (ใช้ default font ของ jsPDF สำหรับภาษาอังกฤษ)
-        pdf.setFont('helvetica')
+        // โหลดและเพิ่มฟอนต์ TH Sarabun
+        let hasThaiFont = false
+        try {
+            // โหลดฟอนต์ปกติ
+            const fontBase64 = await loadThaiFont('/fonts/THSarabun.ttf')
+            pdf.addFileToVFS('THSarabun.ttf', fontBase64)
+            pdf.addFont('THSarabun.ttf', 'THSarabun', 'normal')
+            hasThaiFont = true
+
+            // พยายามโหลดฟอนต์หนัก
+            try {
+                const fontBoldBase64 = await loadThaiFont('/fonts/THSarabun Bold.ttf')
+                pdf.addFileToVFS('THSarabun-Bold.ttf', fontBoldBase64)
+                pdf.addFont('THSarabun-Bold.ttf', 'THSarabun', 'bold')
+                console.log('✅ โหลดฟอนต์ TH Sarabun (ปกติและหนัก) สำเร็จ')
+            } catch (boldFontError) {
+                console.warn('⚠️ ไม่สามารถโหลดฟอนต์หนักได้ - ใช้ฟอนต์ปกติแทน:', boldFontError)
+            }
+
+            pdf.setFont('THSarabun')
+        } catch (fontError) {
+            console.warn('⚠️ ไม่สามารถโหลดฟอนต์ TH Sarabun ได้ - ใช้ฟอนต์เริ่มต้น:', fontError)
+            pdf.setFont('helvetica')
+        }
+
+        // ฟังก์ชันช่วยในการตั้งค่าฟอนต์
+        const setFont = (style: 'normal' | 'bold' = 'normal') => {
+            pdf.setFont(hasThaiFont ? 'THSarabun' : 'helvetica', style)
+        }
 
         // หัวเอกสาร
+        setFont('bold')
         pdf.setFontSize(20)
         pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', 105, 30, { align: 'center' })
 
         // ข้อมูลทั่วไป
+        setFont('normal')
         pdf.setFontSize(14)
         pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, 20, 50)
         pdf.text(`ภาคเรียน: ${data.formData.semester}`, 20, 65)
@@ -78,10 +125,12 @@ export const generatePDF = (data: ReportData): void => {
         if (data.geminiOcrResult.hasData && data.geminiOcrResult.data) {
             const ocrData = data.geminiOcrResult.data
 
+            setFont('bold')
             pdf.setFontSize(16)
             pdf.text('ข้อมูลรายวิชา (จาก PDF)', 20, yPosition)
             yPosition += 15
 
+            setFont('normal')
             pdf.setFontSize(12)
             pdf.text(`รหัสวิชา: ${ocrData.course_id || 'ไม่มีข้อมูล'}`, 20, yPosition)
             yPosition += 10
@@ -99,10 +148,12 @@ export const generatePDF = (data: ReportData): void => {
             yPosition += 20
 
             // ผลการตรวจสอบมาตรฐาน
+            setFont('bold')
             pdf.setFontSize(16)
             pdf.text('ผลการตรวจสอบมาตรฐาน', 20, yPosition)
             yPosition += 15
 
+            setFont('normal')
             pdf.setFontSize(12)
             const gradeCheck = ocrData.grade_valid ? '✓' : '✗'
             const attitudeCheck = ocrData.attitude_valid ? '✓' : '✗'
@@ -115,6 +166,7 @@ export const generatePDF = (data: ReportData): void => {
             pdf.text(`${readCheck} อ่าน วิเคราะห์ เขียน (≥80%): ${ocrData.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, 20, yPosition)
             yPosition += 20
         } else {
+            setFont('normal')
             pdf.setFontSize(14)
             pdf.text('ข้อมูลจาก PDF: ไม่มีข้อมูลหรือไม่สามารถประมวลผลได้', 20, yPosition)
             yPosition += 20
@@ -122,10 +174,12 @@ export const generatePDF = (data: ReportData): void => {
 
         // ข้อมูลจาก Excel
         if (data.excelData.hasData && data.excelData.data) {
+            setFont('bold')
             pdf.setFontSize(16)
             pdf.text(`ข้อมูลจากไฟล์ Excel (ชีท "${data.excelData.sheetName}")`, 20, yPosition)
             yPosition += 15
 
+            setFont('normal')
             pdf.setFontSize(12)
             Object.entries(data.excelData.data).forEach(([key, value]) => {
                 // เช็คว่าเกินหน้า ต้องเพิ่มหน้าใหม่หรือไม่
@@ -141,6 +195,7 @@ export const generatePDF = (data: ReportData): void => {
             })
             yPosition += 15
         } else {
+            setFont('normal')
             pdf.setFontSize(14)
             pdf.text('ข้อมูลจาก Excel: ไม่มีข้อมูลในชีท "check" หรือไม่สามารถอ่านได้', 20, yPosition)
             yPosition += 20
@@ -152,10 +207,12 @@ export const generatePDF = (data: ReportData): void => {
             yPosition = 20
         }
 
+        setFont('bold')
         pdf.setFontSize(16)
         pdf.text('สรุปผลการประมวลผล', 20, yPosition)
         yPosition += 15
 
+        setFont('normal')
         pdf.setFontSize(12)
         pdf.text(`สถานะ: ${data.summary.success ? 'สำเร็จ' : 'ล้มเหลว'}`, 20, yPosition)
         yPosition += 10
