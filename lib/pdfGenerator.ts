@@ -53,6 +53,7 @@ interface ReportData {
 
 /**
  * ฟังก์ชันสำหรับสร้าง PDF รายงาน ปพ.5 จากข้อมูลที่ backend ส่งกลับ
+ * จะเปิด PDF ในแทบใหม่ และถ้าไม่สามารถเปิดได้จะดาวน์โหลดอัตโนมัติ
  * @param data ข้อมูลที่ได้รับจาก backend API
  */
 export const generatePDF = (data: ReportData): void => {
@@ -168,15 +169,33 @@ export const generatePDF = (data: ReportData): void => {
         // ส่วนท้าย
         pdf.setFontSize(10)
         pdf.text(`สร้างเมื่อ: ${data.formData.timestamp}`, 20, yPosition)
-        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, 20, yPosition + 10)
-
-        // สร้างชื่อไฟล์
+        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, 20, yPosition + 10)        // สร้างชื่อไฟล์
         const filename = `report-pp5-${data.formData.academicYear}-${data.formData.semester}-${Date.now()}.pdf`
 
-        // ดาวน์โหลด PDF
-        pdf.save(filename)
+        // สร้าง Blob จาก PDF และเปิดในแทบใหม่
+        const pdfBlob = pdf.output('blob')
+        const pdfUrl = URL.createObjectURL(pdfBlob)
 
-        console.log('✅ PDF สร้างและดาวน์โหลดสำเร็จ:', filename)
+        // เปิด PDF ในแทบใหม่
+        const newWindow = window.open(pdfUrl, '_blank')
+
+        if (newWindow) {
+            // ตั้งชื่อหน้าต่างใหม่
+            newWindow.document.title = filename
+
+            // ล้าง URL เมื่อหน้าต่างถูกปิด (เพื่อประหยัด memory)
+            newWindow.addEventListener('beforeunload', () => {
+                URL.revokeObjectURL(pdfUrl)
+            })
+
+            console.log('✅ PDF สร้างและเปิดในแทบใหม่สำเร็จ:', filename)
+        } else {
+            // Fallback: ดาวน์โหลดถ้าไม่สามารถเปิดแทบใหม่ได้ (popup blocked)
+            console.warn('⚠️ ไม่สามารถเปิดแทบใหม่ได้ (อาจถูก popup blocker บล็อก) - ดาวน์โหลดลงเครื่องแทน')
+            pdf.save(filename)
+            URL.revokeObjectURL(pdfUrl)
+            console.log('✅ PDF ดาวน์โหลดสำเร็จ (fallback):', filename)
+        }
 
     } catch (error) {
         console.error('❌ เกิดข้อผิดพลาดในการสร้าง PDF:', error)
