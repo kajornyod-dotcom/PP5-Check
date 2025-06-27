@@ -47,12 +47,13 @@ const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
             // เพิ่ม QR Code ลงใน PDF
             pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
 
-            // เพิ่มข้อความอธิบาย QR Code (เฉพาะหน้าแรก)
+            // เพิ่มข้อความ UUID ด้านล่าง QR Code และจัดกึ่งกลาง (เฉพาะหน้าแรก)
             if (pageNum === 1) {
                 pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
-                pdf.setFontSize(7)
-                pdf.text('UUID:', qrX, qrY - 3)
-                pdf.text(uuid.substring(0, 15) + '...', qrX, qrY - 0.5)
+                pdf.setFontSize(5)
+                const textY = qrY + qrSize + 3 // วางข้อความด้านล่าง QR Code 3mm
+                const centerX = qrX + (qrSize / 2) // จุดกึ่งกลางของ QR Code
+                pdf.text(uuid, centerX, textY, { align: 'center' })
             }
         }
 
@@ -301,6 +302,19 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         yPosition += 10
         pdf.text(`มีข้อมูล PDF: ${data.summary.hasPdfData ? 'มี' : 'ไม่มี'}`, 20, yPosition)
         yPosition += 20
+
+        // แสดงข้อมูลครูที่รับผิดชอบ (จาก Excel home_teacher)
+        if (data.excelData.hasData && data.excelData.data?.home_teacher) {
+            setFont('bold')
+            pdf.setFontSize(14)
+            pdf.text('ข้อมูลผู้รับผิดชอบ', 20, yPosition)
+            yPosition += 12
+
+            setFont('normal')
+            pdf.setFontSize(12)
+            pdf.text(`ครูที่รับผิดชอบ: ${data.excelData.data.home_teacher}`, 20, yPosition)
+            yPosition += 20
+        }
 
         // ข้อมูลฐานข้อมูล (ถ้ามี)
         if (data.database) {

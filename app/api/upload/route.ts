@@ -247,6 +247,15 @@ export async function POST(request: NextRequest) {
         try {
             console.log('\n=== กำลังบันทึกข้อมูลลงฐานข้อมูล ===')
 
+            // ดึงชื่อครูที่รับผิดชอบจาก Excel (home_teacher) หรือใช้ค่าเริ่มต้น
+            const uploaderName = (excelData && Object.keys(excelData).length > 0 && excelData.home_teacher)
+                ? String(excelData.home_teacher)
+                : 'Anonymous'
+
+            console.log('🔍 Uploader Name:', uploaderName)
+            console.log('🔍 Excel Data Keys:', Object.keys(excelData || {}))
+            console.log('🔍 Home Teacher Value:', excelData?.home_teacher)
+
             // ดึง IP address และ User Agent
             const submitterIp = request.headers.get('x-forwarded-for') ||
                 request.headers.get('x-real-ip') ||
@@ -255,7 +264,7 @@ export async function POST(request: NextRequest) {
 
             savedRecord = await prisma.ppkPp5Submit.create({
                 data: {
-                    uploaderName: 'Anonymous', // สามารถปรับเป็นชื่อผู้ใช้จริงได้ในอนาคต
+                    uploaderName, // ใช้ค่าจาก home_teacher ใน Excel
                     academicYear,
                     semester,
                     xlsxFileName: xlsxFile.name,
@@ -317,11 +326,35 @@ export async function POST(request: NextRequest) {
             const academicYear = data.get('academicYear') as string
             const semester = data.get('semester') as string
             const xlsxFile = data.get('file_xlsx') as File
+            // ดึงชื่อครูที่รับผิดชอบจาก Excel (home_teacher) หากมี
+            let uploaderName = 'Anonymous'
+            try {
+                // ลองอ่าน Excel เพื่อดึงข้อมูล home_teacher สำหรับ error logging
+                if (xlsxFile) {
+                    const xlsxBuffer = await xlsxFile.arrayBuffer()
+                    const workbook = XLSX.read(xlsxBuffer, { type: 'buffer' })
+                    const worksheet = workbook.Sheets['check']
+                    if (worksheet) {
+                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+                        const headers = data[0] as string[]
+                        const values = data[1] as any[]
+                        const homeTeacherIndex = headers.findIndex(h =>
+                            h && typeof h === 'string' && h.toLowerCase().includes('home_teacher')
+                        )
+                        if (homeTeacherIndex !== -1 && values[homeTeacherIndex]) {
+                            uploaderName = String(values[homeTeacherIndex])
+                        }
+                    }
+                }
+            } catch (excelReadError) {
+                console.warn('⚠️ ไม่สามารถอ่าน home_teacher จาก Excel สำหรับ error logging:', excelReadError)
+            }
+
             const pdfFile = data.get('file_pdf') as File | null
 
             await prisma.ppkPp5Submit.create({
                 data: {
-                    uploaderName: 'Anonymous',
+                    uploaderName, // ใช้ค่าจาก home_teacher หรือ 'Anonymous'
                     academicYear: academicYear || 'unknown',
                     semester: semester || 'unknown',
                     xlsxFileName: xlsxFile?.name || 'unknown',
