@@ -430,12 +430,23 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const tableStartX2 = margins.left
         const tableStartY2 = yPosition // เริ่มตารางใหม่ หลังจากข้อมูลไฟล์
         const tableWidth2 = pageWidth - margins.left - margins.right
-        const tableHeight2 = 19 * 8 // 19 แถว x 8mm ต่อแถว = 152mm
+        // const tableHeight2 = 19 * 8 // 19 แถว x 8mm ต่อแถว = 152mm // Comment out or remove this line
         const col1Width2 = tableWidth2 * 0.1  // คอลลัมน์ 1: 10%
         const col2Width2 = tableWidth2 * 0.4  // คอลลัมน์ 2: 40%
         const col3Width2 = tableWidth2 * 0.1  // คอลลัมน์ 3: 30%
         const col4Width2 = tableWidth2 * 0.4  // คอลลัมน์ 4: 20%
         const cellHeight2 = 8 // ความสูงแต่ละแถว 8mm
+
+        // เฉพาะหน้าแรก: แสดงเฉพาะรายการที่ต้องการเท่านั้น
+        const tableData = [
+            'ปกหน้า (ปก)',
+            'รายการประเมินคุณลักษณะอันพึงประสงค์',
+            'รายการประเมินการอ่าน คิด วิเคราะห์',
+            'การให้ระดับผลการเรียน',
+            'หน่วยการเรียนรู้ ตัวชี้วัดและผลการเรียนรู้ (01,02)'
+        ]
+
+        const tableHeight2 = (tableData.length + 1) * cellHeight2 // Calculate height based on data rows + header
 
         // วาดพื้นหลังตาราง
         pdf.setFillColor(250, 250, 250) // สีเทาอ่อนมาก
@@ -445,14 +456,14 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setDrawColor(0, 0, 0)
         pdf.setLineWidth(0.1)
 
-        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว) - ไม่มีการผสานเซลล์แล้ว
-        for (let i = 0; i <= 19; i++) {
+        // วาดเส้นแนวนอน (สำหรับ header + data rows)
+        for (let i = 0; i <= tableData.length + 1; i++) { // Loop based on data length + header + bottom border
             const y = tableStartY2 + (i * cellHeight2)
             // วาดเส้นแนวนอนเต็มความกว้างทุกเส้น
             pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
         }
 
-        // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลลัมน์)
+        // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลัมน์)
         const colPositions = [
             tableStartX2,
             tableStartX2 + col1Width2,
@@ -505,18 +516,6 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         // เพิ่มข้อมูลในตาราง (แถวที่ 2-19)
         setFont('normal')
         pdf.setFontSize(12) // ลดขนาดฟอนต์เล็กลงเพื่อให้พอดีกับการ wrap
-
-        // เฉพาะหน้าแรก: แสดงเฉพาะรายการที่ต้องการเท่านั้น
-        const tableData = [
-            'ปกหน้า (ปก)',
-            'รายการประเมินคุณลักษณะอันพึงประสงค์',
-            'รายการประเมินการอ่าน คิด วิเคราะห์',
-            'การให้ระดับผลการเรียน',
-            'หน่วยการเรียนรู้ ตัวชี้วัดและผลการเรียนรู้ (01,02)'
-        ]
-
-        setFont('normal')
-        pdf.setFontSize(12)
 
         // สร้างตารางตรวจสอบหน้าแรก (เฉพาะรายการที่ต้องการ)
         for (let i = 0; i < tableData.length; i++) {
@@ -577,12 +576,30 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const tableStartX3 = margins.left
         const tableStartY3 = yPosition // เริ่มตารางใหม่ หลังจากข้อมูลไฟล์
         const tableWidth3 = pageWidth - margins.left - margins.right
-        const tableHeight3 = 19 * 8 // 19 แถว x 8mm ต่อแถว = 152mm
+        // const tableHeight3 = 19 * 8 // 19 แถว x 8mm ต่อแถว = 152mm // Comment out or remove this line
         const col1Width3 = tableWidth3 * 0.1  // คอลลัมน์ 1: 10%
         const col2Width3 = tableWidth3 * 0.4  // คอลลัมน์ 2: 40%
         const col3Width3 = tableWidth3 * 0.1  // คอลลัมน์ 3: 30%
         const col4Width3 = tableWidth3 * 0.4  // คอลลัมน์ 4: 20%
         const cellHeight3 = 8 // ความสูงแต่ละแถว 8mm
+
+        // รายการสำหรับหน้าที่ 2 (รายการที่ 8-18)
+        const tableDataPage2 = [
+            'บันทึกเวลาเรียน (03 (1))',
+            'คะแนนก่อนกลางและคะแนนกลางภาค (04)',
+            'การสรุปผลปกหน้า (ปก)',
+            'บันทึกเวลาเรียน (03 (2))',
+            'คะแนนหลังกลางภาค (05)',
+            'คะแนนสอบปลายภาค (05)',
+            'ตรวจสอบการให้ระดับผลการเรียน (06)',
+            'คะแนนสมรรถนะ (07)',
+            'คะคุณลักษณะอันพึงประสงค์ (08)',
+            'คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)',
+            'สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)',
+            'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
+        ]
+
+        const tableHeight3 = (tableDataPage2.length + 1) * cellHeight3 // Calculate height based on data rows + header
 
         // วาดพื้นหลังตาราง
         pdf.setFillColor(250, 250, 250) // สีเทาอ่อนมาก
@@ -592,14 +609,14 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setDrawColor(0, 0, 0)
         pdf.setLineWidth(0.1)
 
-        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว)
-        for (let i = 0; i <= 19; i++) {
+        // วาดเส้นแนวนอน (สำหรับ header + data rows)
+        for (let i = 0; i <= tableDataPage2.length + 1; i++) { // Loop based on data length + header + bottom border
             const y = tableStartY3 + (i * cellHeight3)
             // วาดเส้นแนวนอนเต็มความกว้างทุกเส้น
             pdf.line(tableStartX3, y, tableStartX3 + tableWidth3, y)
         }
 
-        // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลลัมน์)
+        // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลัมน์)
         const colPositions2 = [
             tableStartX3,
             tableStartX3 + col1Width3,
@@ -649,22 +666,6 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             )
         })
 
-        // รายการสำหรับหน้าที่ 2 (รายการที่ 8-18)
-        const tableDataPage2 = [
-            'บันทึกเวลาเรียน (03 (1))',
-            'คะแนนก่อนกลางและคะแนนกลางภาค (04)',
-            'การสรุปผลปกหน้า (ปก)',
-            'บันทึกเวลาเรียน (03 (2))',
-            'คะแนนหลังกลางภาค (05)',
-            'คะแนนสอบปลายภาค (05)',
-            'ตรวจสอบการให้ระดับผลการเรียน (06)',
-            'คะแนนสมรรถนะ (07)',
-            'คะคุณลักษณะอันพึงประสงค์ (08)',
-            'คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)',
-            'สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)',
-            'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
-        ]
-
         // เพิ่มข้อมูลในตาราง (แถวที่ 2-12 สำหรับรายการที่ 8-18)
         setFont('normal')
         pdf.setFontSize(12)
@@ -705,6 +706,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             // ผลการตรวจสอบ (ว่าง) - จัดกึ่งกลางเสมอ
             // หมายเหตุ (ว่าง) - จัดกึ่งกลางเสมอ
         }
+
+        // อัพเดท yPosition สำหรับเนื้อหาต่อไป
+        yPosition = tableStartY3 + tableHeight3 + 10
 
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
@@ -754,7 +758,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
 
             console.log('✅ PDF สร้างและเปิดในแทบใหม่สำเร็จ:', filename)
         } else {
-            // Fallback: ดาวน์โหลดถ้าไม่สามารถเปิดแทบใหม่ได้ (popup blocked)
+            // Fallback: ดาวน์โหลดถ้าไม่สามารถเปิดแทบใหม่ได้ (popup blocked) - ใช้ jsPDF save
             console.warn('⚠️ ไม่สามารถเปิดแทบใหม่ได้ (อาจถูก popup blocker บล็อก) - ดาวน์โหลดลงเครื่องแทน')
             pdf.save(filename)
             URL.revokeObjectURL(pdfUrl)
