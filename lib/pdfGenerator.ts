@@ -425,7 +425,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         // ตรวจสอบข้อมูลหน้าปก
         const coverPageCheckResult = checkCoverPageData(data);
 
-        yPosition = drawTable( // ลบ await ที่นี่
+        yPosition = drawTable(
             pdf,
             margins.left,
             yPosition,
@@ -451,7 +451,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจกลางภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
-        yPosition = drawTable( // ลบ await ที่นี่
+        yPosition = drawTable(
             pdf,
             margins.left,
             yPosition,
@@ -473,7 +473,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจปลายภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
-        yPosition = drawTable( // ลบ await ที่นี่
+        yPosition = drawTable(
             pdf,
             margins.left,
             yPosition,
@@ -628,7 +628,7 @@ const checkCoverPageData = (data: ReportData): '1' | '0' | '' => {
 }
 
 // ====== Helper: Draw Table (Refactored) ======
-const drawTable = ( // ทำให้กลับเป็น synchronous function
+const drawTable = (
     pdf: jsPDF,
     startX: number,
     startY: number,
@@ -637,8 +637,8 @@ const drawTable = ( // ทำให้กลับเป็น synchronous funct
     headers: string[],
     data: string[],
     setFont: (style?: 'normal' | 'bold') => void,
-    results: string[] = [], // เปลี่ยน type ของ results กลับเป็น string[]
-    notes: string[] = [] // เพิ่ม parameter สำหรับหมายเหตุ
+    results: string[] = [],
+    notes: string[] = []
 ) => {
     const colPercents = [0.1, 0.4, 0.1, 0.4]
     const colWidths = colPercents.map(p => tableWidth * p)
@@ -725,10 +725,22 @@ const drawTable = ( // ทำให้กลับเป็น synchronous funct
             true
         );
 
-        // คอลลัมน์ที่ 3: ผลการตรวจสอบ (ใช้ตัวเลข 0/1 หรือข้อความว่าง)
-        const resultText = results[i] || '';
-        const resultX = colPositions[2] + (colWidths[2] / 2);
-        pdf.text(resultText, resultX, textBaselineY, { align: 'center' });
+        // คอลลัมน์ที่ 3: ผลการตรวจสอบ (ใช้ไอคอน ถูก/ผิด หรือข้อความว่าง)
+        const resultValue = results[i];
+        const iconSize = cellHeight * 0.7; // ขนาดไอคอนประมาณ 70% ของความสูงเซลล์
+        const iconX = colPositions[2] + (colWidths[2] - iconSize) / 2; // จัดกึ่งกลางไอคอนในคอลัมน์
+        const iconY = rowY + (cellHeight - iconSize) / 2; // จัดกึ่งกลางไอคอนในแถว
+
+        if (resultValue === '1' && correctIconDataURL) {
+            pdf.addImage(correctIconDataURL, 'PNG', iconX, iconY, iconSize, iconSize);
+        } else if (resultValue === '0' && cancelIconDataURL) {
+            pdf.addImage(cancelIconDataURL, 'PNG', iconX, iconY, iconSize, iconSize);
+        } else if (resultValue !== '') {
+            // ถ้าไม่ใช่ 0 หรือ 1 แต่มีค่า ให้แสดงข้อความเดิม (เผื่อกรณีอื่นในอนาคต)
+            const resultText = resultValue || '';
+            const resultX = colPositions[2] + (colWidths[2] / 2);
+            pdf.text(resultText, resultX, textBaselineY, { align: 'center' });
+        }
 
         // คอลลัมน์ที่ 4: หมายเหตุ (จัดกึ่งกลาง)
         const noteText = notes[i] || '';
@@ -791,3 +803,41 @@ const renderSignatureSection = (
         pdf.text(signer.label, centerX, textY, { align: 'center' })
     })
 }
+
+// ฟังก์ชันสำหรับโหลดรูปภาพและแปลงเป็น Base64
+const loadImageAsBase64 = async (imagePath: string): Promise<string> => {
+    try {
+        const response = await fetch(imagePath);
+        if (!response.ok) {
+            throw new Error(`ไม่สามารถโหลดรูปภาพ ${imagePath} ได้`);
+        }
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error(`ข้อผิดพลาดในการโหลดรูปภาพ ${imagePath}:`, error);
+        throw error;
+    }
+};
+
+// ตัวแปรสำหรับเก็บ Data URL ของรูปภาพ
+let correctIconDataURL: string | null = null;
+let cancelIconDataURL: string | null = null;
+
+// ฟังก์ชันสำหรับโหลดไอคอนเมื่อเริ่มต้น
+const loadIcons = async () => {
+    try {
+        correctIconDataURL = await loadImageAsBase64('/correct.png');
+        cancelIconDataURL = await loadImageAsBase64('/cancel.png');
+        console.log('✅ โหลดไอคอน ถูก/ผิด สำเร็จ');
+    } catch (error) {
+        console.warn('⚠️ ไม่สามารถโหลดไอคอน ถูก/ผิด ได้:', error);
+    }
+};
+
+// เรียกใช้ฟังก์ชันโหลดไอคอนเมื่อโมดูลโหลด
+loadIcons();
