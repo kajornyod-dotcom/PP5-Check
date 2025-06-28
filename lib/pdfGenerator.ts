@@ -272,7 +272,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const mergedCellWidth = col2Width + col3Width // ความกว้างของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
         const textX = mergedCellStartX + (mergedCellWidth / 2) // กึ่งกลางของเซลล์ที่ผสาน
         const textY = tableStartY + (cellHeight / 2) + 3 // กึ่งกลางของแถวแรก (เพิ่ม 3 เพื่อปรับตำแหน่งให้ดี)
-        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })        // เพิ่มข้อความในเซลล์ที่ผสาน 2,2+2,3 - ปีการศึกษาและภาคเรียน
+        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })        // เพิ่มข้อความในเซลล์ที่ 2,2+2,3 - ปีการศึกษาและภาคเรียน
         setFont('normal')
         pdf.setFontSize(16)
         const mergedCell22StartX = tableStartX + col1Width // เริ่มต้นของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
@@ -285,6 +285,51 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const semester = data.excelData.data?.home_semester || data.formData.semester || 'ไม่มีข้อมูล'
 
         pdf.text(`ปีการศึกษา ${academicYear} ภาคเรียนที่ ${semester}`, cell22CenterX, cell22Y, { align: 'center' })
+
+        // เพิ่มข้อความในเซลล์ที่ 3,2 - วิชา รหัสวิชา และชื่อวิชา
+        setFont('normal')
+        pdf.setFontSize(14)
+        const cell32X = tableStartX + col1Width + 5 // เริ่มต้นคอลลัมน์ที่ 2 + margin 5mm
+        const cell32Y = tableStartY + (2 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 3 + กึ่งกลางเซลล์
+
+        // ใช้ข้อมูลจาก Excel
+        const subjectCode = data.excelData.data?.home_subject_code || 'ไม่มีข้อมูล'
+        const subject = data.excelData.data?.home_subject || 'ไม่มีข้อมูล'
+
+        pdf.text(`วิชา ${subjectCode} ${subject}`, cell32X, cell32Y)
+
+        // เพิ่มข้อความในเซลล์ที่ 3,3 - จำนวนชั่วโมงเรียนต่อสัปดาห์
+        setFont('normal')
+        pdf.setFontSize(14)
+        const cell33X = tableStartX + col1Width + col2Width + 5 // เริ่มต้นคอลลัมน์ที่ 3 + margin 5mm
+        const cell33Y = tableStartY + (2 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 3 + กึ่งกลางเซลล์
+
+        // ใช้ข้อมูลจาก Excel
+        const studyTime = data.excelData.data?.home_study_time || 'ไม่มีข้อมูล'
+
+        pdf.text(`${studyTime} ชั่วโมง/สัปดาห์`, cell33X, cell33Y)
+
+        // เพิ่มข้อความในเซลล์ที่ 4,2 - ผู้สอน
+        setFont('normal')
+        pdf.setFontSize(14)
+        const cell42X = tableStartX + col1Width + 5 // เริ่มต้นคอลลัมน์ที่ 2 + margin 5mm
+        const cell42Y = tableStartY + (3 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 4 + กึ่งกลางเซลล์
+
+        // ใช้ข้อมูลจาก Excel
+        const teacher = data.excelData.data?.home_teacher || 'ไม่มีข้อมูล'
+
+        pdf.text(`ผู้สอน ${teacher}`, cell42X, cell42Y)
+
+        // เพิ่มข้อความในเซลล์ที่ 4,3 - จำนวนหน่วยกิต
+        setFont('normal')
+        pdf.setFontSize(14)
+        const cell43X = tableStartX + col1Width + col2Width + 5 // เริ่มต้นคอลลัมน์ที่ 3 + margin 5mm
+        const cell43Y = tableStartY + (3 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 4 + กึ่งกลางเซลล์
+
+        // ใช้ข้อมูลจาก Excel
+        const credit = data.excelData.data?.home_credit || 'ไม่มีข้อมูล'
+
+        pdf.text(`${credit} หน่วยกิต`, cell43X, cell43Y)
 
         // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้ตาราง)
         setFont('normal')
