@@ -279,10 +279,17 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             8,
             ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ'],
             [
-                'ปกหน้า (ปก)',
-                'รายการประเมินคุณลักษณะอันพึงประสงค์',
-                'รายการประเมินการอ่าน คิด วิเคราะห์',
-                'การให้ระดับผลการเรียน',
+                'ข้อมูลระดับชั้น (ปก)',
+                'ข้อมูลห้องเรียน (ปก)',
+                'ภาคเรียน (ปก)',
+                'ปีการศึกษา (ปก)',
+                'ข้อมูลรายวิชา (ปก)',
+                'รหัสวิชา (ปก)',
+                'ข้อมูลกลุ่มสาระ (ปก)',
+                'หน่วยกิต (ปก)',
+                'เวลาเรียน (ปก)',
+                'ครูผู้สอน (ปก)',
+                'ครูที่ปรึกษา (ปก)',
                 'หน่วยการเรียนรู้ ตัวชี้วัดและผลการเรียนรู้ (01,02)'
             ],
             setFont,
@@ -544,17 +551,15 @@ const drawTable = (
     pdf.setFontSize(12)
 
     for (let i = 0; i < data.length; i++) {
-        const rowY = startY + ((i + 1) * cellHeight) // ตำแหน่ง Y สำหรับเริ่มต้นแถว
-        const cellXResult = colPositions[2];
-        const cellXNote = colPositions[3];
+        const rowY = startY + ((i + 1) * cellHeight);
 
-        // คำนวณตำแหน่ง Y สำหรับจัดกึ่งกลางแนวตั้งในเซลล์
-        const textBaselineY = rowY + cellHeight / 2 + pdf.getFontSize() * 0.35; // คำนวณ baseline Y
+        // ใช้ baseline: 'middle' และวางที่กึ่งกลางเซลล์
+        const textBaselineY = rowY + (cellHeight / 2);
 
-        // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลาง)
+        // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลางทั้งแนวนอนและแนวตั้ง)
         const sequenceNumber = (i + 1).toString();
         const seqX = colPositions[0] + (colWidths[0] / 2);
-        pdf.text(sequenceNumber, seqX, textBaselineY, { align: 'center' });
+        pdf.text(sequenceNumber, seqX, textBaselineY, { align: 'center', baseline: 'middle' });
 
         // คอลลัมน์ที่ 2: รายการ - ใช้ฟังก์ชัน wrapTextInCell
         const maxTextWidth = colWidths[1] - 6;
