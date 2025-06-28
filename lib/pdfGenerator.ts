@@ -334,62 +334,60 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้ตาราง)
         setFont('normal')
         pdf.setFontSize(14)
-        const contentStartY = tableStartY + tableHeight + 10 // เริ่มเนื้อหา 10mm ใต้ตาราง (ตารางสูง 80mm แล้ว)
-        pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, margins.left, contentStartY)
-        pdf.text(`ภาคเรียน: ${data.formData.semester}`, margins.left, contentStartY + 15)
-
+        const contentStartY = tableStartY + tableHeight + 8 // เริ่มเนื้อหา 10mm ใต้ตาราง (ตารางสูง 80mm แล้ว)
+        pdf.text('ข้อมูลทั่วไป', margins.left, contentStartY)
         let yPosition = contentStartY + 35 // เริ่มเนื้อหาหลัก
 
         // ข้อมูลจาก PDF OCR (Gemini)
-        if (data.geminiOcrResult.hasData && data.geminiOcrResult.data) {
-            const ocrData = data.geminiOcrResult.data
+        // if (data.geminiOcrResult.hasData && data.geminiOcrResult.data) {
+        //     const ocrData = data.geminiOcrResult.data
 
-            setFont('bold')
-            pdf.setFontSize(16)
-            pdf.text('ข้อมูลรายวิชา (จาก PDF)', margins.left, yPosition)
-            yPosition += 15
+        //     setFont('bold')
+        //     pdf.setFontSize(16)
+        //     pdf.text('ข้อมูลรายวิชา (จาก PDF)', margins.left, yPosition)
+        //     yPosition += 15
 
-            setFont('normal')
-            pdf.setFontSize(12)
-            pdf.text(`รหัสวิชา: ${ocrData.course_id || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`ชื่อวิชา: ${ocrData.course_name || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`ปีการศึกษา: ${ocrData.academic_year || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`เทอม: ${ocrData.semester || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`ระดับชั้น: ${ocrData.grade_level || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`กลุ่มเรียน: ${ocrData.section || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`ครูผู้สอน: ${ocrData.teacher || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
-            yPosition += 20
+        //     setFont('normal')
+        //     pdf.setFontSize(12)
+        //     pdf.text(`รหัสวิชา: ${ocrData.course_id || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`ชื่อวิชา: ${ocrData.course_name || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`ปีการศึกษา: ${ocrData.academic_year || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`เทอม: ${ocrData.semester || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`ระดับชั้น: ${ocrData.grade_level || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`กลุ่มเรียน: ${ocrData.section || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`ครูผู้สอน: ${ocrData.teacher || 'ไม่มีข้อมูล'}`, margins.left, yPosition)
+        //     yPosition += 20
 
-            // ผลการตรวจสอบมาตรฐาน
-            setFont('bold')
-            pdf.setFontSize(16)
-            pdf.text('ผลการตรวจสอบมาตรฐาน', margins.left, yPosition)
-            yPosition += 15
+        //     // ผลการตรวจสอบมาตรฐาน
+        //     setFont('bold')
+        //     pdf.setFontSize(16)
+        //     pdf.text('ผลการตรวจสอบมาตรฐาน', margins.left, yPosition)
+        //     yPosition += 15
 
-            setFont('normal')
-            pdf.setFontSize(12)
-            const gradeCheck = ocrData.grade_valid ? '✓' : '✗'
-            const attitudeCheck = ocrData.attitude_valid ? '✓' : '✗'
-            const readCheck = ocrData.read_analyze_write_valid ? '✓' : '✗'
+        //     setFont('normal')
+        //     pdf.setFontSize(12)
+        //     const gradeCheck = ocrData.grade_valid ? '✓' : '✗'
+        //     const attitudeCheck = ocrData.attitude_valid ? '✓' : '✗'
+        //     const readCheck = ocrData.read_analyze_write_valid ? '✓' : '✗'
 
-            pdf.text(`${gradeCheck} ผลการเรียน (≥70%): ${ocrData.grade_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`${attitudeCheck} คุณลักษณะอันพึงประสงค์ (≥80%): ${ocrData.attitude_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
-            yPosition += 10
-            pdf.text(`${readCheck} อ่าน วิเคราะห์ เขียน (≥80%): ${ocrData.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
-            yPosition += 20
-        } else {
-            setFont('normal')
-            pdf.setFontSize(14)
-            pdf.text('ข้อมูลจาก PDF: ไม่มีข้อมูลหรือไม่สามารถประมวลผลได้', margins.left, yPosition)
-            yPosition += 20
-        }
+        //     pdf.text(`${gradeCheck} ผลการเรียน (≥70%): ${ocrData.grade_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`${attitudeCheck} คุณลักษณะอันพึงประสงค์ (≥80%): ${ocrData.attitude_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
+        //     yPosition += 10
+        //     pdf.text(`${readCheck} อ่าน วิเคราะห์ เขียน (≥80%): ${ocrData.read_analyze_write_valid ? 'ผ่าน' : 'ไม่ผ่าน'}`, margins.left, yPosition)
+        //     yPosition += 20
+        // } else {
+        //     setFont('normal')
+        //     pdf.setFontSize(14)
+        //     pdf.text('ข้อมูลจาก PDF: ไม่มีข้อมูลหรือไม่สามารถประมวลผลได้', margins.left, yPosition)
+        //     yPosition += 20
+        // }
 
         // ข้อมูลจาก Excel
         if (data.excelData.hasData && data.excelData.data) {
