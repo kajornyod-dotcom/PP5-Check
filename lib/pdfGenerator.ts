@@ -435,6 +435,14 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             }
         }
 
+        // เพิ่มหัวข้อ "รายการตรวจก่อนกลางภาค" ด้านบนตารางรายการตรวจ
+        setFont('bold')
+        pdf.setFontSize(14)
+        const titleX = pageWidth / 2 // กึ่งกลางหน้ากระดาษ
+        const titleY = yPosition + 3 // เพิ่มระยะห่าง 3mm
+        pdf.text('รายการตรวจก่อนกลางภาค', titleX, titleY, { align: 'center' })
+        yPosition += 10 // เพิ่มระยะห่างหลังหัวข้อ
+
         // สร้างตาราง 19 แถว 4 คอลลัมน์
         const tableStartX2 = margins.left
         const tableStartY2 = yPosition // เริ่มตารางใหม่ หลังจากข้อมูลไฟล์
