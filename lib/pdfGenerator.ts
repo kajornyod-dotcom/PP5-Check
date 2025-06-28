@@ -1,72 +1,7 @@
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
-
-// ฟังก์ชันสำหรับ wrap text ในเซลล์ตาราง
-const wrapTextInCell = (pdf: any, text: string, x: number, y: number, maxWidth: number, lineHeight: number = 5, cellWidth: number = 0, cellHeight: number = 0, isCenterSingleLine: boolean = false, isLeftVerticalCenter: boolean = false) => {
-    const words = text.split(' ')
-    let line = ''
-    let currentY = y
-    const lines = []
-
-    for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + ' '
-        const testWidth = pdf.getTextWidth(testLine)
-
-        if (testWidth > maxWidth && line !== '') {
-            lines.push(line.trim())
-            line = words[i] + ' '
-        } else {
-            line = testLine
-        }
-    }
-    lines.push(line.trim())
-
-    // วาดข้อความทีละบรรทัด
-    if (isCenterSingleLine && cellWidth > 0 && cellHeight > 0) {
-        // จัดกึ่งกลางทั้งแนวตั้งและแนวนอน
-        const totalTextHeight = lines.length * lineHeight
-        const centerX = x - 2 + (cellWidth / 2) // ปรับ x กลับไปที่ตำแหน่งเริ่มต้นของเซลล์
-        const startY = (currentY - 3) + (cellHeight - totalTextHeight) / 2 + lineHeight * 0.8 // จัดกึ่งกลางแนวตั้ง
-
-        lines.forEach((lineText, index) => {
-            pdf.text(lineText, centerX, startY + (index * lineHeight), { align: 'center' })
-        })
-    } else if (isLeftVerticalCenter && cellWidth > 0 && cellHeight > 0) {
-        // จัดชิดซ้ายและกึ่งกลางแนวตั้ง
-        const totalTextHeight = lines.length * lineHeight
-        const startY = (currentY - 3) + (cellHeight - totalTextHeight) / 2 + lineHeight * 0.7 // ปรับตำแหน่งเริ่มต้นให้อยู่กึ่งกลางแนวตั้ง
-
-        lines.forEach((lineText, index) => {
-            pdf.text(lineText, x, startY + (index * lineHeight), { align: 'left' })
-        })
-    } else {
-        // ใช้การวาดแบบปกติ (หลายบรรทัดหรือไม่ต้องการจัดกึ่งกลาง)
-        lines.forEach((lineText, index) => {
-            pdf.text(lineText, x, currentY + (index * lineHeight))
-        })
-    }
-
-    return lines.length * lineHeight // คืนค่าความสูงที่ใช้
-}
-
-// ฟังก์ชันสำหรับสร้าง QR Code
-const generateQRCode = async (text: string): Promise<string> => {
-    try {
-        const qrCodeDataURL = await QRCode.toDataURL(text, {
-            width: 200, // เพิ่มขนาดเพื่อความชัดเจน
-            margin: 2,
-            color: {
-                dark: '#000000',
-                light: '#FFFFFF'
-            },
-            errorCorrectionLevel: 'M' // ระดับการแก้ไขข้อผิดพลาดปานกลาง
-        })
-        return qrCodeDataURL
-    } catch (error) {
-        console.error('ข้อผิดพลาดในการสร้าง QR Code:', error)
-        throw error
-    }
-}
+import { ReportData } from './pdfTypes'
+import { wrapTextInCell, generateQRCode, loadThaiFont, loadImageAsBase64 } from './pdfUtils'
 
 // ฟังก์ชันสำหรับ render ตารางส่วนหัวและรายการไฟล์ Excel ในทุกหน้า
 const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasThaiFont: boolean, margins: any) => {
@@ -243,35 +178,24 @@ const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
         // สร้าง QR Code จาก UUID
         const qrCodeDataURL = await generateQRCode(uuid)
 
-        // ได้จำนวนหน้าทั้งหมด
-        const totalPages = (pdf as any).internal.pages.length - 1 // หักหน้าแรกที่เป็น template
+        // ได้จำนวนหน้ากระดาษ A4 (210 x 297 mm)
+        const pageWidth = pdf.internal.pageSize.getWidth()
+        const pageHeight = pdf.internal.pageSize.getHeight()
 
-        // วนลูปเพิ่ม QR Code ในทุกหน้า
-        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-            pdf.setPage(pageNum)
+        // กำหนดขนาดและตำแหน่งของ QR Code
+        const qrSize = 25 // ขนาด QR Code (mm)
+        const qrX = pageWidth - qrSize - 10 // 10mm จากขอบขวา
+        const qrY = pageHeight - qrSize - 10 // 10mm จากขอบล่าง
 
-            // ได้ขนาดหน้ากระดาษ A4 (210 x 297 mm)
-            const pageWidth = pdf.internal.pageSize.getWidth()
-            const pageHeight = pdf.internal.pageSize.getHeight()
+        // เพิ่ม QR Code ลงใน PDF
+        pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
 
-            // กำหนดขนาดและตำแหน่งของ QR Code
-            const qrSize = 25 // ขนาด QR Code (mm)
-            const qrX = pageWidth - qrSize - 10 // 10mm จากขอบขวา
-            const qrY = pageHeight - qrSize - 10 // 10mm จากขอบล่าง
-
-            // เพิ่ม QR Code ลงใน PDF
-            pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
-
-            // เพิ่มข้อความ UUID ด้านล่าง QR Code และจัดกึ่งกลาง (ทุกหน้า)
-            pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
-            pdf.setFontSize(5)
-            const textY = qrY + qrSize + 3 // วางข้อความด้านล่าง QR Code 3mm
-            const centerX = qrX + (qrSize / 2) // จุดกึ่งกลางของ QR Code
-            pdf.text(uuid, centerX, textY, { align: 'center' })
-        }
-
-        console.log(`✅ เพิ่ม QR Code ลงใน PDF สำเร็จ (${totalPages} หน้า)`)
-
+        // เพิ่มข้อความ UUID ด้านล่าง QR Code และจัดกึ่งกลาง (ทุกหน้า)
+        pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
+        pdf.setFontSize(5)
+        const textY = qrY + qrSize + 3 // วางข้อความด้านล่าง QR Code 3mm
+        const centerX = qrX + (qrSize / 2) // จุดกึ่งกลางของ QR Code
+        pdf.text(uuid, centerX, textY, { align: 'center' })
     } catch (qrError) {
         console.warn('⚠️ ไม่สามารถสร้าง QR Code ได้:', qrError)
 
@@ -286,85 +210,7 @@ const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
     }
 }
 
-// ฟังก์ชันสำหรับโหลดฟอนต์ TH Sarabun
-const loadThaiFont = async (fontPath: string): Promise<string> => {
-    try {
-        const response = await fetch(fontPath)
-        if (!response.ok) {
-            throw new Error(`ไม่สามารถโหลดฟอนต์ ${fontPath} ได้`)
-        }
-        const arrayBuffer = await response.arrayBuffer()
-        const base64String = btoa(
-            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        )
-        return base64String
-    } catch (error) {
-        console.error('ข้อผิดพลาดในการโหลดฟอนต์:', error)
-        throw error
-    }
-}
-
-// Type definitions สำหรับข้อมูลที่ backend ส่งกลับ
-interface FormData {
-    academicYear: string
-    semester: string
-    submittedAt: string
-    timestamp: string
-}
-
-interface ExcelData {
-    hasData: boolean
-    sheetName?: string
-    data?: { [key: string]: any }
-    totalFields?: number
-    message?: string
-    // ข้อมูลไฟล์ Excel (เพิ่ม)
-    fileName?: string
-    fileSize?: number
-    uploadedAt?: string
-}
-
-interface GeminiOcrData {
-    course_id: string
-    course_name: string
-    academic_year: string
-    semester: string
-    grade_level: string
-    section: number
-    teacher: string
-    grade_valid: boolean
-    attitude_valid: boolean
-    read_analyze_write_valid: boolean
-}
-
-interface GeminiOcrResult {
-    hasData: boolean
-    data?: GeminiOcrData
-    processedAt?: string
-    message?: string
-}
-
-interface Summary {
-    success: boolean
-    message: string
-    hasExcelData: boolean
-    hasPdfData: boolean
-    totalDataSources: number
-}
-
-interface DatabaseInfo {
-    recordId: string
-    uuid: string
-    savedAt: string
-}
-
-interface ReportData {
-    formData: FormData
-    excelData: ExcelData
-    geminiOcrResult: GeminiOcrResult
-    summary: Summary
-    database?: DatabaseInfo
-}
+// ===== ลบซ้ำ interface/type ที่ประกาศในไฟล์นี้ออก =====
 
 /**
  * ฟังก์ชันสำหรับสร้าง PDF รายงาน ปพ.5 จากข้อมูลที่ backend ส่งกลับ
@@ -803,26 +649,6 @@ const renderSignatureSection = (
         pdf.text(signer.label, centerX, textY, { align: 'center' })
     })
 }
-
-// ฟังก์ชันสำหรับโหลดรูปภาพและแปลงเป็น Base64
-const loadImageAsBase64 = async (imagePath: string): Promise<string> => {
-    try {
-        const response = await fetch(imagePath);
-        if (!response.ok) {
-            throw new Error(`ไม่สามารถโหลดรูปภาพ ${imagePath} ได้`);
-        }
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (error) {
-        console.error(`ข้อผิดพลาดในการโหลดรูปภาพ ${imagePath}:`, error);
-        throw error;
-    }
-};
 
 // ตัวแปรสำหรับเก็บ Data URL ของรูปภาพ
 let correctIconDataURL: string | null = null;
