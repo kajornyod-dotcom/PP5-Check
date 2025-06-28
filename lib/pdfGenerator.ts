@@ -392,9 +392,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const tableStartY2 = yPosition // เริ่มตารางใหม่ หลังจากข้อมูลไฟล์
         const tableWidth2 = pageWidth - margins.left - margins.right
         const tableHeight2 = 19 * 8 // 19 แถว x 8mm ต่อแถว = 152mm
-        const col1Width2 = tableWidth2 * 0.1  // คอลลัมน์ 1: 10%
-        const col2Width2 = tableWidth2 * 0.4  // คอลลัมน์ 2: 40%
-        const col3Width2 = tableWidth2 * 0.3  // คอลลัมน์ 3: 30%
+        const col1Width2 = tableWidth2 * 0.15  // คอลลัมน์ 1: 10%
+        const col2Width2 = tableWidth2 * 0.5  // คอลลัมน์ 2: 40%
+        const col3Width2 = tableWidth2 * 0.15  // คอลลัมน์ 3: 30%
         const col4Width2 = tableWidth2 * 0.2  // คอลลัมน์ 4: 20%
         const cellHeight2 = 8 // ความสูงแต่ละแถว 8mm
 
