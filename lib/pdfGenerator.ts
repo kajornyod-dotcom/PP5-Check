@@ -68,6 +68,173 @@ const generateQRCode = async (text: string): Promise<string> => {
     }
 }
 
+// ฟังก์ชันสำหรับ render ตารางส่วนหัวและรายการไฟล์ Excel ในทุกหน้า
+const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasThaiFont: boolean, margins: any) => {
+    const setFont = (style: 'normal' | 'bold' = 'normal') => {
+        pdf.setFont(hasThaiFont ? 'THSarabun' : 'helvetica', style)
+    }
+
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const tableStartX = margins.left
+    const tableStartY = margins.top
+    const tableWidth = pageWidth - margins.left - margins.right
+    const tableHeight = 40
+
+    // กำหนดความกว้างแต่ละคอลัมน์
+    const col1Width = tableWidth * 0.2
+    const col2Width = tableWidth * 0.6
+    const col3Width = tableWidth * 0.2
+    const cellHeight = tableHeight / 4
+
+    // วาดกรอบตาราง
+    pdf.setDrawColor(0, 0, 0)
+    pdf.setLineWidth(0.2)
+
+    // เพิ่ม background สีเทาให้ตาราง
+    pdf.setFillColor(240, 240, 240)
+    pdf.rect(tableStartX, tableStartY, tableWidth, tableHeight, 'F')
+
+    // วาดเส้นแนวนอน
+    for (let i = 0; i <= 4; i++) {
+        const y = tableStartY + (i * cellHeight)
+        if (i === 0 || i === 4) {
+            pdf.line(tableStartX, y, tableStartX + tableWidth, y)
+        } else {
+            pdf.line(tableStartX + col1Width, y, tableStartX + tableWidth, y)
+        }
+    }
+
+    // วาดเส้นแนวตั้ง
+    pdf.line(tableStartX, tableStartY, tableStartX, tableStartY + tableHeight)
+    const col1EndX = tableStartX + col1Width
+    pdf.line(col1EndX, tableStartY, col1EndX, tableStartY + tableHeight)
+    const col2EndX = tableStartX + col1Width + col2Width
+    pdf.line(col2EndX, tableStartY + (2 * cellHeight), col2EndX, tableStartY + tableHeight)
+    const tableEndX = tableStartX + tableWidth
+    pdf.line(tableEndX, tableStartY, tableEndX, tableStartY + tableHeight)
+
+    // เพิ่มโลโก้
+    try {
+        const logoResponse = await fetch('/logo-ppk-512x512-1.png')
+        if (logoResponse.ok) {
+            const logoArrayBuffer = await logoResponse.arrayBuffer()
+            const logoBase64 = btoa(
+                new Uint8Array(logoArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+            )
+            const logoDataURL = `data:image/png;base64,${logoBase64}`
+
+            const logoSize = 25
+            const logoX = tableStartX + (col1Width - logoSize) / 2
+            const logoY = tableStartY + (tableHeight - logoSize) / 2
+
+            pdf.addImage(logoDataURL, 'PNG', logoX, logoY, logoSize, logoSize)
+        }
+    } catch (logoError) {
+        console.warn('⚠️ ข้อผิดพลาดในการโหลดโลโก้:', logoError)
+    }
+
+    // เพิ่มข้อความรายงาน
+    setFont('bold')
+    pdf.setFontSize(16)
+    const mergedCellStartX = tableStartX + col1Width
+    const mergedCellWidth = col2Width + col3Width
+    const textX = mergedCellStartX + (mergedCellWidth / 2)
+    const textY = tableStartY + (cellHeight / 2) + 3
+    pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })
+
+    // ปีการศึกษาและภาคเรียน
+    setFont('normal')
+    pdf.setFontSize(16)
+    const mergedCell22StartX = tableStartX + col1Width
+    const mergedCell22Width = col2Width + col3Width
+    const cell22CenterX = mergedCell22StartX + (mergedCell22Width / 2)
+    const cell22Y = tableStartY + cellHeight + (cellHeight / 2) + 2
+
+    const academicYear = data.excelData.data?.home_academic_year || data.formData.academicYear || 'ไม่มีข้อมูล'
+    const semester = data.excelData.data?.home_semester || data.formData.semester || 'ไม่มีข้อมูล'
+
+    pdf.text(`ปีการศึกษา ${academicYear} ภาคเรียนที่ ${semester}`, cell22CenterX, cell22Y, { align: 'center' })
+
+    // วิชา รหัสวิชา และชื่อวิชา
+    setFont('normal')
+    pdf.setFontSize(14)
+    const cell32X = tableStartX + col1Width + 5
+    const cell32Y = tableStartY + (2 * cellHeight) + (cellHeight / 2) + 2
+
+    const subjectCode = data.excelData.data?.home_subject_code || 'ไม่มีข้อมูล'
+    const subject = data.excelData.data?.home_subject || 'ไม่มีข้อมูล'
+
+    pdf.text(`วิชา ${subjectCode} ${subject}`, cell32X, cell32Y)
+
+    // จำนวนชั่วโมงเรียนต่อสัปดาห์
+    const cell33X = tableStartX + col1Width + col2Width + 5
+    const cell33Y = tableStartY + (2 * cellHeight) + (cellHeight / 2) + 2
+
+    const studyTime = data.excelData.data?.home_study_time || 'ไม่มีข้อมูล'
+
+    pdf.text(`${studyTime} ชั่วโมง/สัปดาห์`, cell33X, cell33Y)
+
+    // ผู้สอน
+    const cell42X = tableStartX + col1Width + 5
+    const cell42Y = tableStartY + (3 * cellHeight) + (cellHeight / 2) + 2
+
+    const teacher = data.excelData.data?.home_teacher || 'ไม่มีข้อมูล'
+
+    pdf.text(`ผู้สอน ${teacher}`, cell42X, cell42Y)
+
+    // จำนวนหน่วยกิต
+    const cell43X = tableStartX + col1Width + col2Width + 5
+    const cell43Y = tableStartY + (3 * cellHeight) + (cellHeight / 2) + 2
+
+    const credit = data.excelData.data?.home_credit || 'ไม่มีข้อมูล'
+
+    pdf.text(`${credit} หน่วยกิต`, cell43X, cell43Y)
+
+    // รายการไฟล์ Excel
+    const contentStartY = tableStartY + tableHeight + 8
+    let yPosition = contentStartY
+
+    if (data.excelData.fileName || data.excelData.fileSize || data.excelData.uploadedAt) {
+        setFont('bold')
+        pdf.setFontSize(12)
+        pdf.text('รายการไฟล์ Excel:', margins.left, yPosition)
+        yPosition += 5
+
+        setFont('normal')
+        pdf.setFontSize(11)
+
+        if (data.excelData.fileName) {
+            pdf.text(`1. ชื่อไฟล์: ${data.excelData.fileName}`, margins.left + 5, yPosition)
+            yPosition += 5
+        }
+
+        if (data.excelData.fileSize) {
+            const fileSizeInKB = (data.excelData.fileSize / 1024).toFixed(2)
+            const fileSizeInMB = (data.excelData.fileSize / (1024 * 1024)).toFixed(2)
+            const displayFileSize = data.excelData.fileSize < 1024 * 1024
+                ? `${fileSizeInKB} KB`
+                : `${fileSizeInMB} MB`
+            pdf.text(`2. ขนาดไฟล์: ${displayFileSize}`, margins.left + 5, yPosition)
+            yPosition += 5
+        }
+
+        if (data.excelData.uploadedAt) {
+            const uploadDate = new Date(data.excelData.uploadedAt).toLocaleString('th-TH', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+            pdf.text(`3. อัพโหลดเมื่อ: ${uploadDate}`, margins.left + 5, yPosition)
+            yPosition += 5
+        }
+    }
+
+    return yPosition // คืนค่าตำแหน่ง Y สำหรับเนื้อหาต่อไป
+}
+
 // ฟังก์ชันสำหรับเพิ่ม QR Code ในทุกหน้าของ PDF
 const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
     try {
@@ -248,192 +415,10 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             left: 15
         }
 
-        // สร้างตารางส่วนหัว 4 แถว 3 คอลลัมน์
+        // ใช้ฟังก์ชัน renderHeaderTableAndFileInfo สำหรับหน้าแรก
+        let yPosition = await renderHeaderTableAndFileInfo(pdf, data, hasThaiFont, margins)
+
         const pageWidth = pdf.internal.pageSize.getWidth()
-        const tableStartX = margins.left
-        const tableStartY = margins.top
-        const tableWidth = pageWidth - margins.left - margins.right // ความกว้างตารางพอดีกับขอบ
-        const tableHeight = 40 // เพิ่มความสูงตารางเป็น 40mm
-
-        // กำหนดความกว้างแต่ละคอลลัมน์ (10%, 80%, 10%)
-        const col1Width = tableWidth * 0.2  // คอลลัมน์ 1: 10%
-        const col2Width = tableWidth * 0.6  // คอลลัมน์ 2: 80%
-        const col3Width = tableWidth * 0.2  // คอลลัมน์ 3: 10%
-        const cellHeight = tableHeight / 4 // แบ่งเป็น 4 แถวเท่า ๆ กัน
-
-        // วาดกรอบตาราง
-        pdf.setDrawColor(0, 0, 0) // สีดำ
-        pdf.setLineWidth(0.2) // ลดความหนาของเส้นเป็น 0.2mm
-
-        // เพิ่ม background สีเทาให้ตาราง
-        pdf.setFillColor(240, 240, 240) // สีเทาอ่อน (RGB: 240, 240, 240)
-        pdf.rect(tableStartX, tableStartY, tableWidth, tableHeight, 'F') // วาดสี่เหลี่ยมสีเทา
-
-        // วาดเส้นแนวนอน (5 เส้น สำหรับ 4 แถว) - ไม่วาดในคอลลัมน์ที่ 1 ที่ผสานแล้ว
-        for (let i = 0; i <= 4; i++) {
-            const y = tableStartY + (i * cellHeight)
-            // เส้นบนและล่างสุดวาดเต็มความกว้าง
-            if (i === 0 || i === 4) {
-                pdf.line(tableStartX, y, tableStartX + tableWidth, y)
-            } else {
-                // เส้นกลางวาดเฉพาะในคอลลัมน์ 2-3 (ข้ามคอลลัมน์ที่ 1)
-                pdf.line(tableStartX + col1Width, y, tableStartX + tableWidth, y)
-            }
-        }
-
-        // วาดเส้นแนวตั้ง (ปรับเพื่อผสานเซลล์คอลลัมน์ที่ 1 ทั้งหมด 4 แถว)
-        // เส้นแนวตั้งซ้ายสุด
-        pdf.line(tableStartX, tableStartY, tableStartX, tableStartY + tableHeight)
-
-        // เส้นแนวตั้งที่แบ่งคอลลัมน์ 1 และ 2-3 (ยาวเต็มความสูง)
-        const col1EndX = tableStartX + col1Width
-        pdf.line(col1EndX, tableStartY, col1EndX, tableStartY + tableHeight)
-
-        // เส้นแนวตั้งที่แบ่งคอลลัมน์ 2 และ 3 (ยาวเฉพาะแถว 3-4, ไม่วาดในแถวที่ 1 และ 2)
-        const col2EndX = tableStartX + col1Width + col2Width
-        pdf.line(col2EndX, tableStartY + (2 * cellHeight), col2EndX, tableStartY + tableHeight)
-
-        // เส้นแนวตั้งขวาสุด
-        const tableEndX = tableStartX + tableWidth
-        pdf.line(tableEndX, tableStartY, tableEndX, tableStartY + tableHeight)
-
-        // เพิ่มโลโก้ในคอลลัมน์ที่ 1 (ผสานทั้ง 4 แถว)
-        try {
-            const logoResponse = await fetch('/logo-ppk-512x512-1.png')
-            if (logoResponse.ok) {
-                const logoArrayBuffer = await logoResponse.arrayBuffer()
-                const logoBase64 = btoa(
-                    new Uint8Array(logoArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                )
-                const logoDataURL = `data:image/png;base64,${logoBase64}`
-
-                // คำนวณตำแหน่งกึ่งกลางของคอลลัมน์ที่ 1 ที่ผสานทั้ง 4 แถว
-                const logoSize = 25 // ขนาดโลโก้ 25mm (เพิ่มขนาดเนื่องจากพื้นที่ใหญ่ขึ้น)
-                const logoX = tableStartX + (col1Width - logoSize) / 2 // จัดกึ่งกลางในคอลลัมน์ที่ 1
-                const logoY = tableStartY + (tableHeight - logoSize) / 2 // จัดกึ่งกลางในความสูงทั้งหมด
-
-                pdf.addImage(logoDataURL, 'PNG', logoX, logoY, logoSize, logoSize)
-                console.log('✅ เพิ่มโลโก้ในคอลลัมน์ที่ 1 (ผสาน 4 แถว) สำเร็จ')
-            } else {
-                console.warn('⚠️ ไม่สามารถโหลดโลโก้ได้')
-            }
-        } catch (logoError) {
-            console.warn('⚠️ ข้อผิดพลาดในการโหลดโลโก้:', logoError)
-        }
-
-        // เพิ่มข้อความรายงานในเซลล์ที่ผสาน (1,2+1,3) - แถวแรก คอลลัมน์ที่ 2-3
-        setFont('bold')
-        pdf.setFontSize(16)
-        const mergedCellStartX = tableStartX + col1Width // เริ่มต้นของเซลล์ที่ผสาน
-        const mergedCellWidth = col2Width + col3Width // ความกว้างของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
-        const textX = mergedCellStartX + (mergedCellWidth / 2) // กึ่งกลางของเซลล์ที่ผสาน
-        const textY = tableStartY + (cellHeight / 2) + 3 // กึ่งกลางของแถวแรก (เพิ่ม 3 เพื่อปรับตำแหน่งให้ดี)
-        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })        // เพิ่มข้อความในเซลล์ที่ 2,2+2,3 - ปีการศึกษาและภาคเรียน
-        setFont('normal')
-        pdf.setFontSize(16)
-        const mergedCell22StartX = tableStartX + col1Width // เริ่มต้นของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
-        const mergedCell22Width = col2Width + col3Width // ความกว้างของเซลล์ที่ผสาน
-        const cell22CenterX = mergedCell22StartX + (mergedCell22Width / 2) // จัดกึ่งกลางของเซลล์ที่ผสาน
-        const cell22Y = tableStartY + cellHeight + (cellHeight / 2) + 2 // แถวที่ 2 + กึ่งกลางเซลล์
-
-        // ใช้ข้อมูลจาก Excel หรือใช้ข้อมูลจาก formData เป็น fallback
-        const academicYear = data.excelData.data?.home_academic_year || data.formData.academicYear || 'ไม่มีข้อมูล'
-        const semester = data.excelData.data?.home_semester || data.formData.semester || 'ไม่มีข้อมูล'
-
-        pdf.text(`ปีการศึกษา ${academicYear} ภาคเรียนที่ ${semester}`, cell22CenterX, cell22Y, { align: 'center' })
-
-        // เพิ่มข้อความในเซลล์ที่ 3,2 - วิชา รหัสวิชา และชื่อวิชา
-        setFont('normal')
-        pdf.setFontSize(14)
-        const cell32X = tableStartX + col1Width + 5 // เริ่มต้นคอลลัมน์ที่ 2 + margin 5mm
-        const cell32Y = tableStartY + (2 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 3 + กึ่งกลางเซลล์
-
-        // ใช้ข้อมูลจาก Excel
-        const subjectCode = data.excelData.data?.home_subject_code || 'ไม่มีข้อมูล'
-        const subject = data.excelData.data?.home_subject || 'ไม่มีข้อมูล'
-
-        pdf.text(`วิชา ${subjectCode} ${subject}`, cell32X, cell32Y)
-
-        // เพิ่มข้อความในเซลล์ที่ 3,3 - จำนวนชั่วโมงเรียนต่อสัปดาห์
-        setFont('normal')
-        pdf.setFontSize(14)
-        const cell33X = tableStartX + col1Width + col2Width + 5 // เริ่มต้นคอลลัมน์ที่ 3 + margin 5mm
-        const cell33Y = tableStartY + (2 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 3 + กึ่งกลางเซลล์
-
-        // ใช้ข้อมูลจาก Excel
-        const studyTime = data.excelData.data?.home_study_time || 'ไม่มีข้อมูล'
-
-        pdf.text(`${studyTime} ชั่วโมง/สัปดาห์`, cell33X, cell33Y)
-
-        // เพิ่มข้อความในเซลล์ที่ 4,2 - ผู้สอน
-        setFont('normal')
-        pdf.setFontSize(14)
-        const cell42X = tableStartX + col1Width + 5 // เริ่มต้นคอลลัมน์ที่ 2 + margin 5mm
-        const cell42Y = tableStartY + (3 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 4 + กึ่งกลางเซลล์
-
-        // ใช้ข้อมูลจาก Excel
-        const teacher = data.excelData.data?.home_teacher || 'ไม่มีข้อมูล'
-
-        pdf.text(`ผู้สอน ${teacher}`, cell42X, cell42Y)
-
-        // เพิ่มข้อความในเซลล์ที่ 4,3 - จำนวนหน่วยกิต
-        setFont('normal')
-        pdf.setFontSize(14)
-        const cell43X = tableStartX + col1Width + col2Width + 5 // เริ่มต้นคอลลัมน์ที่ 3 + margin 5mm
-        const cell43Y = tableStartY + (3 * cellHeight) + (cellHeight / 2) + 2 // แถวที่ 4 + กึ่งกลางเซลล์
-
-        // ใช้ข้อมูลจาก Excel
-        const credit = data.excelData.data?.home_credit || 'ไม่มีข้อมูล'
-
-        pdf.text(`${credit} หน่วยกิต`, cell43X, cell43Y)
-
-        // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้ตาราง)
-        setFont('normal')
-        pdf.setFontSize(14)
-        const contentStartY = tableStartY + tableHeight + 8 // เริ่มเนื้อหา 10mm ใต้ตาราง (ตารางสูง 80mm แล้ว)
-        let yPosition = contentStartY // เริ่มเนื้อหาหลัก
-
-        // รายการไฟล์ Excel (ถ้ามีข้อมูล)
-        if (data.excelData.fileName || data.excelData.fileSize || data.excelData.uploadedAt) {
-            setFont('bold')
-            pdf.setFontSize(12)
-            pdf.text('รายการไฟล์ Excel:', margins.left, yPosition)
-            yPosition += 5
-
-            setFont('normal')
-            pdf.setFontSize(11)
-
-            // ชื่อไฟล์
-            if (data.excelData.fileName) {
-                pdf.text(`1. ชื่อไฟล์: ${data.excelData.fileName}`, margins.left + 5, yPosition)
-                yPosition += 5
-            }
-
-            // ขนาดไฟล์
-            if (data.excelData.fileSize) {
-                const fileSizeInKB = (data.excelData.fileSize / 1024).toFixed(2)
-                const fileSizeInMB = (data.excelData.fileSize / (1024 * 1024)).toFixed(2)
-                const displayFileSize = data.excelData.fileSize < 1024 * 1024
-                    ? `${fileSizeInKB} KB`
-                    : `${fileSizeInMB} MB`
-                pdf.text(`2. ขนาดไฟล์: ${displayFileSize}`, margins.left + 5, yPosition)
-                yPosition += 5
-            }
-
-            // วันที่อัพโหลด
-            if (data.excelData.uploadedAt) {
-                const uploadDate = new Date(data.excelData.uploadedAt).toLocaleString('th-TH', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                })
-                pdf.text(`3. อัพโหลดเมื่อ: ${uploadDate}`, margins.left + 5, yPosition)
-                yPosition += 5
-            }
-        }
 
         // เพิ่มหัวข้อ "รายการตรวจก่อนกลางภาค" ด้านบนตารางรายการตรวจ
         setFont('bold')
@@ -607,6 +592,13 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 pdf.text('UUID:', pageWidth - 60, pageHeight - 15)
                 pdf.text(data.database.uuid, pageWidth - 60, pageHeight - 10)
             }
+        }
+
+        // เพิ่มตารางหัวรายงานและรายการไฟล์ Excel ลงในทุกหน้า (ยกเว้นหน้าแรกที่มีอยู่แล้ว)
+        try {
+            await addHeaderToAllPages(pdf, data, hasThaiFont, margins)
+        } catch (headerError) {
+            console.warn('⚠️ ไม่สามารถเพิ่มตารางหัวรายงานในทุกหน้าได้:', headerError)
         }        // สร้างชื่อไฟล์
         const filename = `report-pp5-${data.formData.academicYear}-${data.formData.semester}-${Date.now()}.pdf`
 
@@ -658,4 +650,31 @@ export const validateReportData = (data: any): data is ReportData => {
         typeof data.formData.semester === 'string' &&
         typeof data.formData.timestamp === 'string'
     )
+}
+
+// ฟังก์ชันสำหรับเพิ่มตารางหัวรายงานและรายการไฟล์ Excel ในทุกหน้าของ PDF
+const addHeaderToAllPages = async (pdf: jsPDF, data: ReportData, hasThaiFont: boolean, margins: any): Promise<void> => {
+    try {
+        console.log('🔍 กำลังเพิ่มตารางหัวรายงานและรายการไฟล์ Excel ลงในทุกหน้า PDF')
+
+        // ได้จำนวนหน้าทั้งหมด
+        const totalPages = (pdf as any).internal.pages.length - 1 // หักหน้าแรกที่เป็น template
+
+        // วนลูปเพิ่มตารางหัวใน Página 2 เป็นต้นไป (หน้าแรกมีการ render ไว้แล้วใน generatePDF)
+        for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
+            console.log(`🔍 กำลังเพิ่มตารางหัวรายงานในหน้า ${pageNum}`)
+
+            // ไปที่หน้าที่ต้องการ
+            pdf.setPage(pageNum)
+
+            // เรียกใช้ฟังก์ชัน render header สำหรับหน้านี้
+            await renderHeaderTableAndFileInfo(pdf, data, hasThaiFont, margins)
+        }
+
+        console.log('✅ เพิ่มตารางหัวรายงานและรายการไฟล์ Excel ลงในทุกหน้า PDF สำเร็จ')
+
+    } catch (error) {
+        console.warn('⚠️ ไม่สามารถเพิ่มตารางหัวรายงานในทุกหน้าได้:', error)
+        throw error
+    }
 }
