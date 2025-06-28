@@ -213,13 +213,19 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setDrawColor(0, 0, 0) // สีดำ
         pdf.setLineWidth(0.2) // ลดความหนาของเส้นเป็น 0.2mm
 
-        // วาดเส้นแนวนอน (5 เส้น สำหรับ 4 แถว)
+        // วาดเส้นแนวนอน (5 เส้น สำหรับ 4 แถว) - ไม่วาดในคอลลัมน์ที่ 1 ที่ผสานแล้ว
         for (let i = 0; i <= 4; i++) {
             const y = tableStartY + (i * cellHeight)
-            pdf.line(tableStartX, y, tableStartX + tableWidth, y)
+            // เส้นบนและล่างสุดวาดเต็มความกว้าง
+            if (i === 0 || i === 4) {
+                pdf.line(tableStartX, y, tableStartX + tableWidth, y)
+            } else {
+                // เส้นกลางวาดเฉพาะในคอลลัมน์ 2-3 (ข้ามคอลลัมน์ที่ 1)
+                pdf.line(tableStartX + col1Width, y, tableStartX + tableWidth, y)
+            }
         }
 
-         // วาดเส้นแนวตั้ง (ปรับเพื่อผสานเซลล์คอลลัมน์ที่ 1 ทั้งหมด 4 แถว)
+        // วาดเส้นแนวตั้ง (ปรับเพื่อผสานเซลล์คอลลัมน์ที่ 1 ทั้งหมด 4 แถว)
         // เส้นแนวตั้งซ้ายสุด
         pdf.line(tableStartX, tableStartY, tableStartX, tableStartY + tableHeight)
 
@@ -227,9 +233,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const col1EndX = tableStartX + col1Width
         pdf.line(col1EndX, tableStartY, col1EndX, tableStartY + tableHeight)
 
-        // เส้นแนวตั้งที่แบ่งคอลลัมน์ 2 และ 3 (ยาวเฉพาะแถว 2-4, ไม่วาดในแถวแรก)
+        // เส้นแนวตั้งที่แบ่งคอลลัมน์ 2 และ 3 (ยาวเฉพาะแถว 3-4, ไม่วาดในแถวที่ 1 และ 2)
         const col2EndX = tableStartX + col1Width + col2Width
-        pdf.line(col2EndX, tableStartY + cellHeight, col2EndX, tableStartY + tableHeight)
+        pdf.line(col2EndX, tableStartY + (2 * cellHeight), col2EndX, tableStartY + tableHeight)
 
         // เส้นแนวตั้งขวาสุด
         const tableEndX = tableStartX + tableWidth
@@ -266,7 +272,19 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const mergedCellWidth = col2Width + col3Width // ความกว้างของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
         const textX = mergedCellStartX + (mergedCellWidth / 2) // กึ่งกลางของเซลล์ที่ผสาน
         const textY = tableStartY + (cellHeight / 2) + 3 // กึ่งกลางของแถวแรก (เพิ่ม 3 เพื่อปรับตำแหน่งให้ดี)
-        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })
+        pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })        // เพิ่มข้อความในเซลล์ที่ผสาน 2,2+2,3 - ปีการศึกษาและภาคเรียน
+        setFont('normal')
+        pdf.setFontSize(16)
+        const mergedCell22StartX = tableStartX + col1Width // เริ่มต้นของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
+        const mergedCell22Width = col2Width + col3Width // ความกว้างของเซลล์ที่ผสาน
+        const cell22CenterX = mergedCell22StartX + (mergedCell22Width / 2) // จัดกึ่งกลางของเซลล์ที่ผสาน
+        const cell22Y = tableStartY + cellHeight + (cellHeight / 2) + 2 // แถวที่ 2 + กึ่งกลางเซลล์
+
+        // ใช้ข้อมูลจาก Excel หรือใช้ข้อมูลจาก formData เป็น fallback
+        const academicYear = data.excelData.data?.home_academic_year || data.formData.academicYear || 'ไม่มีข้อมูล'
+        const semester = data.excelData.data?.home_semester || data.formData.semester || 'ไม่มีข้อมูล'
+
+        pdf.text(`ปีการศึกษา ${academicYear} ภาคเรียนที่ ${semester}`, cell22CenterX, cell22Y, { align: 'center' })
 
         // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้ตาราง)
         setFont('normal')
