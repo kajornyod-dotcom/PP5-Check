@@ -454,21 +454,11 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setDrawColor(0, 0, 0)
         pdf.setLineWidth(0.1)
 
-        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว) - ปรับสำหรับการผสานเซลล์
+        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว) - ไม่มีการผสานเซลล์แล้ว
         for (let i = 0; i <= 19; i++) {
             const y = tableStartY2 + (i * cellHeight2)
-            // เส้นบนและล่างสุดวาดเต็มความกว้าง
-            if (i === 0 || i === 19) {
-                pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
-            }
-            // เส้นที่แถว 1, 8-19 วาดเต็มความกว้าง
-            else if (i === 1 || i >= 8) {
-                pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
-            }
-            // เส้นที่แถว 2-7 วาดเฉพาะคอลลัมน์ 2-4 (ข้ามคอลลัมน์ที่ 1 ที่ผสานแล้ว)
-            else if (i >= 2 && i <= 7) {
-                pdf.line(tableStartX2 + col1Width2, y, tableStartX2 + tableWidth2, y)
-            }
+            // วาดเส้นแนวนอนเต็มความกว้างทุกเส้น
+            pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
         }
 
         // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลลัมน์)
@@ -546,24 +536,29 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
         ]
 
-        // เพิ่มข้อความในเซลล์ที่ผสาน (แถวที่ 2-7, คอลลัมน์ 1)
-        setFont('bold')
-        pdf.setFontSize(12)
-        const mergedCellCenterY = tableStartY2 + (1.5 * cellHeight2) + ((6 * cellHeight2) / 2) // กึ่งกลางของเซลล์ที่ผสาน
-        pdf.text('1', tableStartX2 + (col1Width2 / 2), mergedCellCenterY, { align: 'center' })
-
         setFont('normal')
         pdf.setFontSize(12)
 
         for (let i = 0; i < tableData.length; i++) {
             const rowY = tableStartY2 + ((i + 1) * cellHeight2) + 3 // เริ่มต้นข้อความที่ด้านบนของเซลล์
 
-            // รายการ - ใช้ฟังก์ชัน wrapTextInCell ที่ปรับปรุงแล้ว
-            const maxTextWidth = col2Width2 - 6 // ลบ margin ซ้าย-ขวา
-            setFont('normal')
-            pdf.setFontSize(12)
+            // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลาง)
+            const sequenceNumber = (i + 1).toString()
+            wrapTextInCell(
+                pdf,
+                sequenceNumber,
+                tableStartX2 + 2,
+                rowY,
+                col1Width2 - 4,
+                4,
+                col1Width2,
+                cellHeight2,
+                true, // จัดกึ่งกลางทั้งแนวตั้งและแนวนอน
+                false
+            )
 
-            // ใช้ฟังก์ชัน wrapTextInCell พร้อมการจัดชิดซ้ายและกึ่งกลางแนวตั้ง
+            // คอลลัมน์ที่ 2: รายการ - ใช้ฟังก์ชัน wrapTextInCell ที่ปรับปรุงแล้ว
+            const maxTextWidth = col2Width2 - 6 // ลบ margin ซ้าย-ขวา
             wrapTextInCell(
                 pdf,
                 tableData[i],
