@@ -173,29 +173,23 @@ const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasTha
 // ฟังก์ชันสำหรับเพิ่ม QR Code ในทุกหน้าของ PDF
 const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
     try {
-        console.log('🔍 กำลังสร้าง QR Code สำหรับ UUID:', uuid)
-
-        // สร้าง QR Code จาก UUID
         const qrCodeDataURL = await generateQRCode(uuid)
-
-        // ได้จำนวนหน้ากระดาษ A4 (210 x 297 mm)
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
+        const qrSize = 25
+        const qrX = pageWidth - qrSize - 10
+        const qrY = pageHeight - qrSize - 10
 
-        // กำหนดขนาดและตำแหน่งของ QR Code
-        const qrSize = 25 // ขนาด QR Code (mm)
-        const qrX = pageWidth - qrSize - 10 // 10mm จากขอบขวา
-        const qrY = pageHeight - qrSize - 10 // 10mm จากขอบล่าง
-
-        // เพิ่ม QR Code ลงใน PDF
-        pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
-
-        // เพิ่มข้อความ UUID ด้านล่าง QR Code และจัดกึ่งกลาง (ทุกหน้า)
-        pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
-        pdf.setFontSize(5)
-        const textY = qrY + qrSize + 3 // วางข้อความด้านล่าง QR Code 3mm
-        const centerX = qrX + (qrSize / 2) // จุดกึ่งกลางของ QR Code
-        pdf.text(uuid, centerX, textY, { align: 'center' })
+        const totalPages = pdf.getNumberOfPages()
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            pdf.setPage(pageNum)
+            pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
+            pdf.setFont('helvetica')
+            pdf.setFontSize(5)
+            const textY = qrY + qrSize + 3
+            const centerX = qrX + (qrSize / 2)
+            pdf.text(uuid, centerX, textY, { align: 'center' })
+        }
     } catch (qrError) {
         console.warn('⚠️ ไม่สามารถสร้าง QR Code ได้:', qrError)
 
@@ -290,7 +284,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'เวลาเรียน (ปก)',
                 'ครูผู้สอน (ปก)',
                 'ครูที่ปรึกษา (ปก)',
-                'หน่วยการเรียนรู้ ตัวชี้วัดและผลการเรียนรู้ (01,02)'
+                'ความถูกต้องของ KPA (02)',
+                'เวลาเรียนรวมสอดคล้องกับหน่วยกิต (03)',
+                'คะแนนเต็มก่อนกลางภาค (04)',
             ],
             setFont,
             [coverPageCheckResult, '', '', '', ''], // ส่งผลการตรวจสอบสำหรับแต่ละรายการ
