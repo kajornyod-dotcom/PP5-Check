@@ -1,6 +1,54 @@
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 
+// ฟังก์ชันสำหรับ wrap text ในเซลล์ตาราง
+const wrapTextInCell = (pdf: any, text: string, x: number, y: number, maxWidth: number, lineHeight: number = 5, cellWidth: number = 0, cellHeight: number = 0, isCenterSingleLine: boolean = false, isLeftVerticalCenter: boolean = false) => {
+    const words = text.split(' ')
+    let line = ''
+    let currentY = y
+    const lines = []
+
+    for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' '
+        const testWidth = pdf.getTextWidth(testLine)
+
+        if (testWidth > maxWidth && line !== '') {
+            lines.push(line.trim())
+            line = words[i] + ' '
+        } else {
+            line = testLine
+        }
+    }
+    lines.push(line.trim())
+
+    // วาดข้อความทีละบรรทัด
+    if (isCenterSingleLine && cellWidth > 0 && cellHeight > 0) {
+        // จัดกึ่งกลางทั้งแนวตั้งและแนวนอน
+        const totalTextHeight = lines.length * lineHeight
+        const centerX = x - 2 + (cellWidth / 2) // ปรับ x กลับไปที่ตำแหน่งเริ่มต้นของเซลล์
+        const startY = (currentY - 3) + (cellHeight - totalTextHeight) / 2 + lineHeight * 0.8 // จัดกึ่งกลางแนวตั้ง
+
+        lines.forEach((lineText, index) => {
+            pdf.text(lineText, centerX, startY + (index * lineHeight), { align: 'center' })
+        })
+    } else if (isLeftVerticalCenter && cellWidth > 0 && cellHeight > 0) {
+        // จัดชิดซ้ายและกึ่งกลางแนวตั้ง
+        const totalTextHeight = lines.length * lineHeight
+        const startY = (currentY - 3) + (cellHeight - totalTextHeight) / 2 + lineHeight * 0.7 // ปรับตำแหน่งเริ่มต้นให้อยู่กึ่งกลางแนวตั้ง
+
+        lines.forEach((lineText, index) => {
+            pdf.text(lineText, x, startY + (index * lineHeight), { align: 'left' })
+        })
+    } else {
+        // ใช้การวาดแบบปกติ (หลายบรรทัดหรือไม่ต้องการจัดกึ่งกลาง)
+        lines.forEach((lineText, index) => {
+            pdf.text(lineText, x, currentY + (index * lineHeight))
+        })
+    }
+
+    return lines.length * lineHeight // คืนค่าความสูงที่ใช้
+}
+
 // ฟังก์ชันสำหรับสร้าง QR Code
 const generateQRCode = async (text: string): Promise<string> => {
     try {
@@ -436,17 +484,46 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             pdf.line(x, tableStartY2, x, tableStartY2 + tableHeight2)
         })
 
-        // เพิ่มหัวตาราง
+        // เพิ่มหัวตาราง - ใช้ wrapTextInCell เพื่อจัดการข้อความยาว
         setFont('bold')
-        pdf.setFontSize(14)
-        pdf.text('ครั้งที่', tableStartX2 + (col1Width2 / 2), tableStartY2 + 5, { align: 'center' })
-        pdf.text('รายการ', tableStartX2 + col1Width2 + (col2Width2 / 2), tableStartY2 + 5, { align: 'center' })
-        pdf.text('ผลการตรวจสอบ', tableStartX2 + col1Width2 + col2Width2 + (col3Width2 / 2), tableStartY2 + 5, { align: 'center' })
-        pdf.text('หมายเหตุ', tableStartX2 + col1Width2 + col2Width2 + col3Width2 + (col4Width2 / 2), tableStartY2 + 5, { align: 'center' })
+        pdf.setFontSize(12)
+
+        const headerTexts = ['ครั้งที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
+        const headerWidths = [col1Width2, col2Width2, col3Width2, col4Width2]
+        const headerPositions = [
+            tableStartX2,
+            tableStartX2 + col1Width2,
+            tableStartX2 + col1Width2 + col2Width2,
+            tableStartX2 + col1Width2 + col2Width2 + col3Width2
+        ]
+
+        // วาดหัวข้อตารางแต่ละคอลัมน์
+        headerTexts.forEach((headerText, index) => {
+            const maxHeaderWidth = headerWidths[index] - 4 // ลบ margin ซ้าย-ขวา
+
+            // สำหรับ "ผลการตรวจสอบ" ให้ใช้ความกว้างแคบลงเพื่อบังคับให้แบ่งเป็น 2 บรรทัด
+            let adjustedMaxWidth = maxHeaderWidth
+            if (headerText === 'ผลการตรวจ') {
+                adjustedMaxWidth = maxHeaderWidth * 0.6 // ลดความกว้างลง 40% เพื่อบังคับให้แบ่งบรรทัด
+            }
+
+            wrapTextInCell(
+                pdf,
+                headerText,
+                headerPositions[index] + 2, // เพิ่ม margin ซ้าย
+                tableStartY2 + 3, // เริ่มต้นข้อความที่ด้านบนของเซลล์
+                adjustedMaxWidth,
+                4, // line height เล็กลงสำหรับหัวข้อ
+                headerWidths[index],
+                cellHeight2,
+                true, // จัดกึ่งกลางสำหรับบรรทัดเดียว (ใช้สำหรับทุกหัวข้อ)
+                false // ไม่ใช้การจัดชิดซ้าย-กึ่งกลางแนวตั้ง
+            )
+        })
 
         // เพิ่มข้อมูลในตาราง (แถวที่ 2-19)
         setFont('normal')
-        pdf.setFontSize(14)
+        pdf.setFontSize(12) // ลดขนาดฟอนต์เล็กลงเพื่อให้พอดีกับการ wrap
 
         const tableData = [
             'ปกหน้า (ปก)',
@@ -476,19 +553,32 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.text('1', tableStartX2 + (col1Width2 / 2), mergedCellCenterY, { align: 'center' })
 
         setFont('normal')
-        pdf.setFontSize(14)
+        pdf.setFontSize(12)
 
         for (let i = 0; i < tableData.length; i++) {
-            const rowY = tableStartY2 + ((i + 1) * cellHeight2) + 5
+            const rowY = tableStartY2 + ((i + 1) * cellHeight2) + 3 // เริ่มต้นข้อความที่ด้านบนของเซลล์
 
-            // รายการ
-            pdf.text(tableData[i], tableStartX2 + col1Width2 + 3, rowY)
+            // รายการ - ใช้ฟังก์ชัน wrapTextInCell ที่ปรับปรุงแล้ว
+            const maxTextWidth = col2Width2 - 6 // ลบ margin ซ้าย-ขวา
+            setFont('normal')
+            pdf.setFontSize(12)
 
-            // ผลการตรวจสอบ (ว่าง)
-            pdf.text('', tableStartX2 + col1Width2 + col2Width2 + 3, rowY)
+            // ใช้ฟังก์ชัน wrapTextInCell พร้อมการจัดชิดซ้ายและกึ่งกลางแนวตั้ง
+            wrapTextInCell(
+                pdf,
+                tableData[i],
+                tableStartX2 + col1Width2 + 3,
+                rowY,
+                maxTextWidth,
+                4,
+                col2Width2,
+                cellHeight2,
+                false, // ไม่ใช้การจัดกึ่งกลางสำหรับบรรทัดเดียว
+                true   // ใช้การจัดชิดซ้ายและกึ่งกลางแนวตั้ง
+            )
 
-            // หมายเหตุ (ว่าง)
-            pdf.text('', tableStartX2 + col1Width2 + col2Width2 + col3Width2 + 3, rowY)
+            // ผลการตรวจสอบ (ว่าง) - จัดกึ่งกลางเสมอ
+            // หมายเหตุ (ว่าง) - จัดกึ่งกลางเสมอ
         }
 
         // อัพเดท yPosition สำหรับเนื้อหาต่อไป
