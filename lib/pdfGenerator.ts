@@ -406,10 +406,21 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setDrawColor(0, 0, 0)
         pdf.setLineWidth(0.1)
 
-        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว)
+        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว) - ปรับสำหรับการผสานเซลล์
         for (let i = 0; i <= 19; i++) {
             const y = tableStartY2 + (i * cellHeight2)
-            pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
+            // เส้นบนและล่างสุดวาดเต็มความกว้าง
+            if (i === 0 || i === 19) {
+                pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
+            }
+            // เส้นที่แถว 1, 8-19 วาดเต็มความกว้าง
+            else if (i === 1 || i >= 8) {
+                pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
+            }
+            // เส้นที่แถว 2-7 วาดเฉพาะคอลลัมน์ 2-4 (ข้ามคอลลัมน์ที่ 1 ที่ผสานแล้ว)
+            else if (i >= 2 && i <= 7) {
+                pdf.line(tableStartX2 + col1Width2, y, tableStartX2 + tableWidth2, y)
+            }
         }
 
         // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลลัมน์)
@@ -458,11 +469,17 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
         ]
 
+        // เพิ่มข้อความในเซลล์ที่ผสาน (แถวที่ 2-7, คอลลัมน์ 1)
+        setFont('bold')
+        pdf.setFontSize(12)
+        const mergedCellCenterY = tableStartY2 + (1.5 * cellHeight2) + ((6 * cellHeight2) / 2) // กึ่งกลางของเซลล์ที่ผสาน
+        pdf.text('1', tableStartX2 + (col1Width2 / 2), mergedCellCenterY, { align: 'center' })
+
+        setFont('normal')
+        pdf.setFontSize(14)
+
         for (let i = 0; i < tableData.length; i++) {
             const rowY = tableStartY2 + ((i + 1) * cellHeight2) + 5
-
-            // ลำดับ
-            pdf.text(`${i + 1}`, tableStartX2 + (col1Width2 / 2), rowY, { align: 'center' })
 
             // รายการ
             pdf.text(tableData[i], tableStartX2 + col1Width2 + 3, rowY)
