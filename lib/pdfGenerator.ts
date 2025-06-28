@@ -421,7 +421,11 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจก่อนกลางภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
-        yPosition = drawTable(
+
+        // ตรวจสอบข้อมูลหน้าปก
+        const coverPageCheckResult = checkCoverPageData(data);
+
+        yPosition = drawTable( // ลบ await ที่นี่
             pdf,
             margins.left,
             yPosition,
@@ -435,7 +439,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'การให้ระดับผลการเรียน',
                 'หน่วยการเรียนรู้ ตัวชี้วัดและผลการเรียนรู้ (01,02)'
             ],
-            setFont
+            setFont,
+            [coverPageCheckResult, '', '', '', ''], // ส่งผลการตรวจสอบสำหรับแต่ละรายการ
+            ['', '', '', '', ''] // ส่งหมายเหตุ (ตอนนี้ยังว่าง)
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
         // ======= หน้า 2 =======
@@ -445,7 +451,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจกลางภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
-        yPosition = drawTable(
+        yPosition = drawTable( // ลบ await ที่นี่
             pdf,
             margins.left,
             yPosition,
@@ -457,6 +463,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'คะแนนก่อนกลางและคะแนนกลางภาค (04)'
             ],
             setFont
+            // ไม่ส่ง results และ notes สำหรับหน้านี้ เพราะยังไม่มี logic การตรวจสอบ
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
         // ======= หน้า 3 =======
@@ -466,7 +473,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจปลายภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
-        yPosition = drawTable(
+        yPosition = drawTable( // ลบ await ที่นี่
             pdf,
             margins.left,
             yPosition,
@@ -485,6 +492,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
             ],
             setFont
+            // ไม่ส่ง results และ notes สำหรับหน้านี้ เพราะยังไม่มี logic การตรวจสอบ
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
 
@@ -595,8 +603,32 @@ const addHeaderToAllPages = async (pdf: jsPDF, data: ReportData, hasThaiFont: bo
     }
 }
 
+/**
+ * ฟังก์ชันสำหรับตรวจสอบข้อมูลในหน้าปก (ปีการศึกษาและภาคเรียน)
+ * @param data ข้อมูล ReportData
+ * @returns '1' ถ้าข้อมูลตรงกัน, '0' ถ้าไม่ตรงกัน, หรือ '' ถ้าไม่มีข้อมูล Excel
+ */
+const checkCoverPageData = (data: ReportData): '1' | '0' | '' => {
+    const excelAcademicYear = data.excelData.data?.home_academic_year;
+    const excelSemester = data.excelData.data?.home_semester;
+    const formAcademicYear = data.formData.academicYear;
+    const formSemester = data.formData.semester;
+
+    // ตรวจสอบว่ามีข้อมูลจาก Excel และ Form ครบถ้วนหรือไม่
+    if (!excelAcademicYear || !excelSemester || !formAcademicYear || !formSemester) {
+        return ''; // ไม่มีข้อมูลให้ตรวจสอบ
+    }
+
+    // เปรียบเทียบปีการศึกษาและภาคเรียน
+    if (excelAcademicYear === formAcademicYear && excelSemester === formSemester) {
+        return '1'; // ตรงกัน
+    } else {
+        return '0'; // ไม่ตรงกัน
+    }
+}
+
 // ====== Helper: Draw Table (Refactored) ======
-const drawTable = (
+const drawTable = ( // ทำให้กลับเป็น synchronous function
     pdf: jsPDF,
     startX: number,
     startY: number,
@@ -604,7 +636,9 @@ const drawTable = (
     cellHeight: number,
     headers: string[],
     data: string[],
-    setFont: (style?: 'normal' | 'bold') => void
+    setFont: (style?: 'normal' | 'bold') => void,
+    results: string[] = [], // เปลี่ยน type ของ results กลับเป็น string[]
+    notes: string[] = [] // เพิ่ม parameter สำหรับหมายเหตุ
 ) => {
     const colPercents = [0.1, 0.4, 0.1, 0.4]
     const colWidths = colPercents.map(p => tableWidth * p)
@@ -626,53 +660,82 @@ const drawTable = (
     colPositions.forEach(x => {
         pdf.line(x, startY, x, startY + tableHeight)
     })
+
+    // เพิ่มหัวตาราง - ใช้ wrapTextInCell เพื่อจัดการข้อความยาว
     setFont('bold')
     pdf.setFontSize(12)
-    headers.forEach((headerText, idx) => {
-        let maxHeaderWidth = colWidths[idx] - 4
-        if (headerText === 'ผลการตรวจ') maxHeaderWidth *= 0.6
+
+    const headerTexts = ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
+    const headerWidths = [colWidths[0], colWidths[1], colWidths[2], colWidths[3]]
+    const headerPositions = [colPositions[0], colPositions[1], colPositions[2], colPositions[3]]
+
+    // วาดหัวข้อตารางแต่ละคอลัมน์
+    headerTexts.forEach((headerText, idx) => {
+        const maxHeaderWidth = headerWidths[idx] - 4 // ลบ margin ซ้าย-ขวา
+
+        // สำหรับ "ผลการตรวจสอบ" ให้ใช้ความกว้างแคบลงเพื่อบังคับให้แบ่งเป็น 2 บรรทัด
+        let adjustedMaxWidth = maxHeaderWidth
+        if (headerText === 'ผลการตรวจ') {
+            adjustedMaxWidth = maxHeaderWidth * 0.6 // ลดความกว้างลง 40% เพื่อบังคับให้แบ่งบรรทัด
+        }
+
         wrapTextInCell(
             pdf,
             headerText,
-            colPositions[idx] + 2,
-            startY + 3,
-            maxHeaderWidth,
-            4,
-            colWidths[idx],
+            headerPositions[idx] + 2, // เพิ่ม margin ซ้าย
+            startY + 3, // เริ่มต้นข้อความที่ด้านบนของเซลล์
+            adjustedMaxWidth,
+            4, // line height เล็กลงสำหรับหัวข้อ
+            headerWidths[idx],
             cellHeight,
-            true,
-            false
+            true, // จัดกึ่งกลางสำหรับบรรทัดเดียว (ใช้สำหรับทุกหัวข้อ)
+            false // ไม่ใช้การจัดชิดซ้าย-กึ่งกลางแนวตั้ง
         )
     })
+
+    // เพิ่มข้อมูลในตาราง
     setFont('normal')
     pdf.setFontSize(12)
+
     for (let i = 0; i < data.length; i++) {
-        const rowY = startY + ((i + 1) * cellHeight) + 3
-        wrapTextInCell(
-            pdf,
-            (i + 1).toString(),
-            startX + 2,
-            rowY,
-            colWidths[0] - 4,
-            4,
-            colWidths[0],
-            cellHeight,
-            true,
-            false
-        )
+        const rowY = startY + ((i + 1) * cellHeight) // ตำแหน่ง Y สำหรับเริ่มต้นแถว
+        const cellXResult = colPositions[2];
+        const cellXNote = colPositions[3];
+
+        // คำนวณตำแหน่ง Y สำหรับจัดกึ่งกลางแนวตั้งในเซลล์
+        const textBaselineY = rowY + cellHeight / 2 + pdf.getFontSize() * 0.35; // คำนวณ baseline Y
+
+        // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลาง)
+        const sequenceNumber = (i + 1).toString();
+        const seqX = colPositions[0] + (colWidths[0] / 2);
+        pdf.text(sequenceNumber, seqX, textBaselineY, { align: 'center' });
+
+        // คอลลัมน์ที่ 2: รายการ - ใช้ฟังก์ชัน wrapTextInCell
+        const maxTextWidth = colWidths[1] - 6;
         wrapTextInCell(
             pdf,
             data[i],
-            startX + colWidths[0] + 3,
-            rowY,
-            colWidths[1] - 6,
+            colPositions[1] + 3,
+            rowY + 3,
+            maxTextWidth,
             4,
             colWidths[1],
             cellHeight,
             false,
             true
-        )
+        );
+
+        // คอลลัมน์ที่ 3: ผลการตรวจสอบ (ใช้ตัวเลข 0/1 หรือข้อความว่าง)
+        const resultText = results[i] || '';
+        const resultX = colPositions[2] + (colWidths[2] / 2);
+        pdf.text(resultText, resultX, textBaselineY, { align: 'center' });
+
+        // คอลลัมน์ที่ 4: หมายเหตุ (จัดกึ่งกลาง)
+        const noteText = notes[i] || '';
+        const noteX = colPositions[3] + (colWidths[3] / 2);
+        pdf.text(noteText, noteX, textBaselineY, { align: 'center' });
     }
+
     return startY + tableHeight + 10
 }
 
