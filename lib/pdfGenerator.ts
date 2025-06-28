@@ -262,14 +262,12 @@ const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
             // เพิ่ม QR Code ลงใน PDF
             pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
 
-            // เพิ่มข้อความ UUID ด้านล่าง QR Code และจัดกึ่งกลาง (เฉพาะหน้าแรก)
-            if (pageNum === 1) {
-                pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
-                pdf.setFontSize(5)
-                const textY = qrY + qrSize + 3 // วางข้อความด้านล่าง QR Code 3mm
-                const centerX = qrX + (qrSize / 2) // จุดกึ่งกลางของ QR Code
-                pdf.text(uuid, centerX, textY, { align: 'center' })
-            }
+            // เพิ่มข้อความ UUID ด้านล่าง QR Code และจัดกึ่งกลาง (ทุกหน้า)
+            pdf.setFont('helvetica') // ใช้ฟอนต์ที่รองรับภาษาอังกฤษสำหรับ UUID
+            pdf.setFontSize(5)
+            const textY = qrY + qrSize + 3 // วางข้อความด้านล่าง QR Code 3mm
+            const centerX = qrX + (qrSize / 2) // จุดกึ่งกลางของ QR Code
+            pdf.text(uuid, centerX, textY, { align: 'center' })
         }
 
         console.log(`✅ เพิ่ม QR Code ลงใน PDF สำเร็จ (${totalPages} หน้า)`)
