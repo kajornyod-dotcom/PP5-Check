@@ -480,7 +480,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         setFont('bold')
         pdf.setFontSize(12)
 
-        const headerTexts = ['ครั้งที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
+        const headerTexts = ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
         const headerWidths = [col1Width2, col2Width2, col3Width2, col4Width2]
         const headerPositions = [
             tableStartX2,
@@ -633,7 +633,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         setFont('bold')
         pdf.setFontSize(12)
 
-        const headerTexts2 = ['ครั้งที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
+        const headerTexts2 = ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
         const headerWidths2 = [col1Width3, col2Width3, col3Width3, col4Width3]
         const headerPositions2 = [
             tableStartX3,
@@ -674,7 +674,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             const rowY = tableStartY3 + ((i + 1) * cellHeight3) + 3 // เริ่มต้นข้อความที่ด้านบนของเซลล์
 
             // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลาง) - เริ่มต้นจาก 8
-            const sequenceNumber = (i + 8).toString()
+            const sequenceNumber = (i + 1).toString()
             wrapTextInCell(
                 pdf,
                 sequenceNumber,
