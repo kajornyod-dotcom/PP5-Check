@@ -532,7 +532,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 4,
                 col1Width2,
                 cellHeight2,
-                true, // จัดกึ่งกลางทั้งแนวตั้งและแนวนอน
+                true, // จัดกึ่งกลางทั้งแนวตั้งและแนวฮอน
                 false
             )
 
@@ -557,6 +557,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
 
         // อัพเดท yPosition สำหรับเนื้อหาต่อไป
         yPosition = tableStartY2 + tableHeight2 + 10
+
+        // วาดลายเซ็นต์ 3 คน หลังตารางหน้าที่ 1
+        renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
 
         // ========== สร้างหน้าที่ 2 ==========
         pdf.addPage()
@@ -587,16 +590,6 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const tableDataPage2 = [
             'บันทึกเวลาเรียน (03 (1))',
             'คะแนนก่อนกลางและคะแนนกลางภาค (04)',
-            'การสรุปผลปกหน้า (ปก)',
-            'บันทึกเวลาเรียน (03 (2))',
-            'คะแนนหลังกลางภาค (05)',
-            'คะแนนสอบปลายภาค (05)',
-            'ตรวจสอบการให้ระดับผลการเรียน (06)',
-            'คะแนนสมรรถนะ (07)',
-            'คะคุณลักษณะอันพึงประสงค์ (08)',
-            'คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)',
-            'สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)',
-            'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
         ]
 
         const tableHeight3 = (tableDataPage2.length + 1) * cellHeight3 // Calculate height based on data rows + header
@@ -684,7 +677,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 4,
                 col1Width3,
                 cellHeight3,
-                true, // จัดกึ่งกลางทั้งแนวตั้งและแนวนอน
+                true, // จัดกึ่งกลางทั้งแนวตั้งและแนวฮอน
                 false
             )
 
@@ -709,6 +702,152 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
 
         // อัพเดท yPosition สำหรับเนื้อหาต่อไป
         yPosition = tableStartY3 + tableHeight3 + 10
+
+        // วาดลายเซ็นต์ 3 คน หลังตารางหน้าที่ 2
+        renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
+
+        // ========== สร้างหน้าที่ 3 ==========
+        pdf.addPage()
+
+        // Render header และรายการไฟล์ Excel สำหรับหน้าที่ 3
+        yPosition = await renderHeaderTableAndFileInfo(pdf, data, hasThaiFont, margins)
+
+        // เพิ่มหัวข้อ "รายการตรวจกลางภาค" ด้านบนตารางรายการตรวจหน้าที่ 3
+        setFont('bold')
+        pdf.setFontSize(14)
+        const titleX3 = pageWidth / 2 // กึ่งกลางหน้ากระดาษ
+        const titleY3 = yPosition + 3 // เพิ่มระยะห่าง 3mm
+        pdf.text('รายการตรวจปลายภาค', titleX3, titleY3, { align: 'center' })
+        yPosition += 10 // เพิ่มระยะห่างหลังหัวข้อ
+
+        // สร้างตาราง 19 แถว 4 คอลลัมน์ สำหรับหน้าที่ 3 (เหมือนหน้าที่ 2)
+        const tableStartX4 = margins.left
+        const tableStartY4 = yPosition // เริ่มตารางใหม่ หลังจากข้อมูลไฟล์
+        const tableWidth4 = pageWidth - margins.left - margins.right
+        const col1Width4 = tableWidth4 * 0.1  // คอลลัมน์ 1: 10%
+        const col2Width4 = tableWidth4 * 0.4  // คอลลัมน์ 2: 40%
+        const col3Width4 = tableWidth4 * 0.1  // คอลลัมน์ 3: 30%
+        const col4Width4 = tableWidth4 * 0.4  // คอลลัมน์ 4: 20%
+        const cellHeight4 = 8 // ความสูงแต่ละแถว 8mm
+
+        // รายการสำหรับหน้าที่ 3 (เหมือนหน้าที่ 2)
+        const tableDataPage3 = [
+            'บันทึกเวลาเรียน (03)',
+            'คะแนนหลังกลางภาค (05)',
+            'คะแนนสอบปลายภาค (05)',
+            'ตรวจสอบการให้ระดับผลการเรียน (06)',
+            'คะแนนสมรรถนะ (07)',
+            'คะคุณลักษณะอันพึงประสงค์ (08)',
+            'คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)',
+            'สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)',
+            'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
+        ]
+
+        const tableHeight4 = (tableDataPage3.length + 1) * cellHeight4 // Calculate height based on data rows + header
+
+        // วาดพื้นหลังตาราง
+        pdf.setFillColor(250, 250, 250) // สีเทาอ่อนมาก
+        pdf.rect(tableStartX4, tableStartY4, tableWidth4, tableHeight4, 'F')
+
+        // วาดเส้นขอบตาราง
+        pdf.setDrawColor(0, 0, 0)
+        pdf.setLineWidth(0.1)
+
+        // วาดเส้นแนวนอน (สำหรับ header + data rows)
+        for (let i = 0; i <= tableDataPage3.length + 1; i++) { // Loop based on data length + header + bottom border
+            const y = tableStartY4 + (i * cellHeight4)
+            pdf.line(tableStartX4, y, tableStartX4 + tableWidth4, y)
+        }
+
+        // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลัมน์)
+        const colPositions3 = [
+            tableStartX4,
+            tableStartX4 + col1Width4,
+            tableStartX4 + col1Width4 + col2Width4,
+            tableStartX4 + col1Width4 + col2Width4 + col3Width4,
+            tableStartX4 + tableWidth4
+        ]
+
+        colPositions3.forEach(x => {
+            pdf.line(x, tableStartY4, x, tableStartY4 + tableHeight4)
+        })
+
+        // เพิ่มหัวตาราง - ใช้ wrapTextInCell เพื่อจัดการข้อความยาว
+        setFont('bold')
+        pdf.setFontSize(12)
+
+        const headerTexts3 = ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ']
+        const headerWidths3 = [col1Width4, col2Width4, col3Width4, col4Width4]
+        const headerPositions3 = [
+            tableStartX4,
+            tableStartX4 + col1Width4,
+            tableStartX4 + col1Width4 + col2Width4,
+            tableStartX4 + col1Width4 + col2Width4 + col3Width4
+        ]
+
+        headerTexts3.forEach((headerText, index) => {
+            const maxHeaderWidth = headerWidths3[index] - 4
+            let adjustedMaxWidth = maxHeaderWidth
+            if (headerText === 'ผลการตรวจ') {
+                adjustedMaxWidth = maxHeaderWidth * 0.6
+            }
+            wrapTextInCell(
+                pdf,
+                headerText,
+                headerPositions3[index] + 2,
+                tableStartY4 + 3,
+                adjustedMaxWidth,
+                4,
+                headerWidths3[index],
+                cellHeight4,
+                true,
+                false
+            )
+        })
+
+        // เพิ่มข้อมูลในตาราง (แถวที่ 2-12 สำหรับรายการที่ 8-18)
+        setFont('normal')
+        pdf.setFontSize(12)
+
+        for (let i = 0; i < tableDataPage3.length; i++) {
+            const rowY = tableStartY4 + ((i + 1) * cellHeight4) + 3 // เริ่มต้นข้อความที่ด้านบนของเซลล์
+
+            // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลาง) - เริ่มต้นจาก 8
+            const sequenceNumber = (i + 1).toString()
+            wrapTextInCell(
+                pdf,
+                sequenceNumber,
+                tableStartX4 + 2,
+                rowY,
+                col1Width4 - 4,
+                4,
+                col1Width4,
+                cellHeight4,
+                true, // จัดกึ่งกลางทั้งแนวตั้งและแนวฮอน
+                false
+            )
+
+            // คอลลัมน์ที่ 2: รายการ - ใช้ฟังก์ชัน wrapTextInCell ที่ปรับปรุงแล้ว
+            const maxTextWidth = col2Width4 - 6 // ลบ margin ซ้าย-ขวา
+            wrapTextInCell(
+                pdf,
+                tableDataPage3[i],
+                tableStartX4 + col1Width4 + 3,
+                rowY,
+                maxTextWidth,
+                4,
+                col2Width4,
+                cellHeight4,
+                false, // ไม่ใช้การจัดกึ่งกลางสำหรับบรรทัดเดียว
+                true   // ใช้การจัดชิดซ้ายและกึ่งกลางแนวตั้ง
+            )
+
+            // ผลการตรวจสอบ (ว่าง) - จัดกึ่งกลางเสมอ
+            // หมายเหตุ (ว่าง) - จัดกึ่งกลางเสมอ
+        }
+
+        yPosition = tableStartY4 + tableHeight4 + 10
+        renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
 
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
@@ -815,4 +954,57 @@ const addHeaderToAllPages = async (pdf: jsPDF, data: ReportData, hasThaiFont: bo
         console.warn('⚠️ ไม่สามารถเพิ่มตารางหัวรายงานในทุกหน้าได้:', error)
         throw error
     }
+}
+
+// ========== Object เก็บชื่อผู้ลงนาม (dummy) ========== //
+const signatureNames = {
+    registrar: 'นายสมชาย ใจดี',
+    academicHead: 'นางสาวพรทิพย์ เก่งงาน',
+    director: 'นายประเสริฐ ผู้อำนวยการ'
+}
+
+/**
+ * ฟังก์ชันสำหรับวาดลายเซ็นต์ 3 คน (ไม่มีเส้นตาราง)
+ * @param pdf jsPDF instance
+ * @param x จุดเริ่มต้นแนวนอน (เช่น margins.left)
+ * @param y จุดเริ่มต้นแนวตั้ง (หลังตาราง)
+ * @param pageWidth ความกว้างหน้ากระดาษ
+ * @param hasThaiFont ใช้ฟอนต์ไทยหรือไม่
+ */
+const renderSignatureSection = (
+    pdf: jsPDF,
+    x: number,
+    y: number,
+    pageWidth: number,
+    hasThaiFont: boolean
+) => {
+    const setFont = (style: 'normal' | 'bold' = 'normal') => {
+        pdf.setFont(hasThaiFont ? 'THSarabun' : 'helvetica', style)
+    }
+    setFont('normal')
+    pdf.setFontSize(14)
+
+    // ข้อมูลผู้เซ็นต์
+    const signers = [
+        { label: 'นายทะเบียน', name: signatureNames.registrar },
+        { label: 'หัวหน้าวิชาการ', name: signatureNames.academicHead },
+        { label: 'ผู้อำนวยการโรงเรียน', name: signatureNames.director }
+    ]
+
+    // กำหนดขนาดพื้นที่สำหรับแต่ละช่อง (ไม่มีเส้นตาราง)
+    const tableWidth = pageWidth - x * 2
+    const colWidth = tableWidth / 3
+    const startY = y + 5 // เริ่มต้นวาดลายเซ็นต์ 5mm หลังจากจุดเริ่มต้นแนวตั้ง
+
+    // วาดข้อความในแต่ละช่อง (จัดกึ่งกลางแนวตั้งและแนวฮอน)
+    signers.forEach((signer, idx) => {
+        const colX = x + idx * colWidth
+        const centerX = colX + colWidth / 2
+        let textY = startY + 10
+        pdf.text('ลงชื่อ....................................................', centerX, textY, { align: 'center' })
+        textY += 8
+        pdf.text(`(${signer.name})`, centerX, textY, { align: 'center' })
+        textY += 8
+        pdf.text(signer.label, centerX, textY, { align: 'center' })
+    })
 }
