@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { ReportData } from './pdfTypes'
 import { wrapTextInCell, generateQRCode, loadThaiFont, loadImageAsBase64 } from './pdfUtils'
+import { checkPreMidtermItems } from './reportCheckers'
 
 // ฟังก์ชันสำหรับ render ตารางส่วนหัวและรายการไฟล์ Excel ในทุกหน้า
 const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasThaiFont: boolean, margins: any) => {
