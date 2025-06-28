@@ -196,30 +196,44 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             left: 15
         }
 
-        // สร้างตารางส่วนหัว 2 แถว 3 คอลลัมน์
+        // สร้างตารางส่วนหัว 4 แถว 3 คอลลัมน์
         const pageWidth = pdf.internal.pageSize.getWidth()
         const tableStartX = margins.left
         const tableStartY = margins.top
         const tableWidth = pageWidth - margins.left - margins.right // ความกว้างตารางพอดีกับขอบ
-        const tableHeight = 40
-        const cellWidth = tableWidth / 3 // แบ่งเป็น 3 คอลลัมน์เท่า ๆ กัน
-        const cellHeight = tableHeight / 2 // แบ่งเป็น 2 แถวเท่า ๆ กัน
+        const tableHeight = 80 // เพิ่มความสูงตารางเป็น 80mm
+
+        // กำหนดความกว้างแต่ละคอลลัมน์ (10%, 80%, 10%)
+        const col1Width = tableWidth * 0.2  // คอลลัมน์ 1: 10%
+        const col2Width = tableWidth * 0.6  // คอลลัมน์ 2: 80%
+        const col3Width = tableWidth * 0.2  // คอลลัมน์ 3: 10%
+        const cellHeight = tableHeight / 4 // แบ่งเป็น 4 แถวเท่า ๆ กัน
 
         // วาดกรอบตาราง
         pdf.setDrawColor(0, 0, 0) // สีดำ
-        pdf.setLineWidth(0.5)
+        pdf.setLineWidth(0.2) // ลดความหนาของเส้นเป็น 0.2mm
 
-        // วาดเส้นแนวนอน
-        for (let i = 0; i <= 2; i++) {
+        // วาดเส้นแนวนอน (5 เส้น สำหรับ 4 แถว)
+        for (let i = 0; i <= 4; i++) {
             const y = tableStartY + (i * cellHeight)
             pdf.line(tableStartX, y, tableStartX + tableWidth, y)
         }
 
-        // วาดเส้นแนวตั้ง
-        for (let i = 0; i <= 3; i++) {
-            const x = tableStartX + (i * cellWidth)
-            pdf.line(x, tableStartY, x, tableStartY + tableHeight)
-        }
+        // วาดเส้นแนวตั้ง (ปรับเพื่อผสานเซลล์ 1,2 กับ 1,3)
+        // เส้นแนวตั้งซ้ายสุด
+        pdf.line(tableStartX, tableStartY, tableStartX, tableStartY + tableHeight)
+
+        // เส้นแนวตั้งที่แบ่งคอลลัมน์ 1 และ 2-3 (ยาวเต็มความสูง)
+        const col1EndX = tableStartX + col1Width
+        pdf.line(col1EndX, tableStartY, col1EndX, tableStartY + tableHeight)
+
+        // เส้นแนวตั้งที่แบ่งคอลลัมน์ 2 และ 3 (ยาวเฉพาะแถว 2-4, ไม่วาดในแถวแรก)
+        const col2EndX = tableStartX + col1Width + col2Width
+        pdf.line(col2EndX, tableStartY + cellHeight, col2EndX, tableStartY + tableHeight)
+
+        // เส้นแนวตั้งขวาสุด
+        const tableEndX = tableStartX + tableWidth
+        pdf.line(tableEndX, tableStartY, tableEndX, tableStartY + tableHeight)
 
         // เพิ่มโลโก้ในเซลล์ (1,1) - แถวแรก คอลลัมน์แรก
         try {
@@ -233,7 +247,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
 
                 // คำนวณตำแหน่งกึ่งกลางของเซลล์ (1,1)
                 const logoSize = 15 // ขนาดโลโก้ 15mm
-                const logoX = tableStartX + (cellWidth - logoSize) / 2 // จัดกึ่งกลางในเซลล์แรก
+                const logoX = tableStartX + (col1Width - logoSize) / 2 // จัดกึ่งกลางในเซลล์แรก
                 const logoY = tableStartY + (cellHeight - logoSize) / 2 // จัดกึ่งกลางในแถวแรก
 
                 pdf.addImage(logoDataURL, 'PNG', logoX, logoY, logoSize, logoSize)
@@ -245,17 +259,19 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             console.warn('⚠️ ข้อผิดพลาดในการโหลดโลโก้:', logoError)
         }
 
-        // เพิ่มข้อความรายงานในเซลล์ (1,2) - แถวแรก คอลลัมน์ที่สอง
+        // เพิ่มข้อความรายงานในเซลล์ที่ผสาน (1,2+1,3) - แถวแรก คอลลัมน์ที่ 2-3
         setFont('bold')
         pdf.setFontSize(16)
-        const textX = tableStartX + cellWidth + (cellWidth / 2) // กึ่งกลางของคอลลัมน์ที่ 2
+        const mergedCellStartX = tableStartX + col1Width // เริ่มต้นของเซลล์ที่ผสาน
+        const mergedCellWidth = col2Width + col3Width // ความกว้างของเซลล์ที่ผสาน (คอลลัมน์ 2+3)
+        const textX = mergedCellStartX + (mergedCellWidth / 2) // กึ่งกลางของเซลล์ที่ผสาน
         const textY = tableStartY + (cellHeight / 2) + 3 // กึ่งกลางของแถวแรก (เพิ่ม 3 เพื่อปรับตำแหน่งให้ดี)
         pdf.text('รายงานสรุปผลการตรวจสอบ ปพ.5', textX, textY, { align: 'center' })
 
         // ข้อมูลทั่วไป (ปรับตำแหน่งให้อยู่ใต้ตาราง)
         setFont('normal')
         pdf.setFontSize(14)
-        const contentStartY = tableStartY + tableHeight + 10 // เริ่มเนื้อหา 10mm ใต้ตาราง
+        const contentStartY = tableStartY + tableHeight + 10 // เริ่มเนื้อหา 10mm ใต้ตาราง (ตารางสูง 80mm แล้ว)
         pdf.text(`ปีการศึกษา: ${data.formData.academicYear}`, margins.left, contentStartY)
         pdf.text(`ภาคเรียน: ${data.formData.semester}`, margins.left, contentStartY + 15)
 
