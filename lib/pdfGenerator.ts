@@ -385,9 +385,97 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 pdf.text(`3. อัพโหลดเมื่อ: ${uploadDate}`, margins.left + 5, yPosition)
                 yPosition += 5
             }
-
-            yPosition += 10 // เพิ่มระยะห่าง
         }
+
+        // สร้างตาราง 19 แถว 4 คอลลัมน์
+        const tableStartX2 = margins.left
+        const tableStartY2 = yPosition // เริ่มตารางใหม่ หลังจากข้อมูลไฟล์
+        const tableWidth2 = pageWidth - margins.left - margins.right
+        const tableHeight2 = 19 * 8 // 19 แถว x 8mm ต่อแถว = 152mm
+        const col1Width2 = tableWidth2 * 0.1  // คอลลัมน์ 1: 10%
+        const col2Width2 = tableWidth2 * 0.4  // คอลลัมน์ 2: 40%
+        const col3Width2 = tableWidth2 * 0.3  // คอลลัมน์ 3: 30%
+        const col4Width2 = tableWidth2 * 0.2  // คอลลัมน์ 4: 20%
+        const cellHeight2 = 8 // ความสูงแต่ละแถว 8mm
+
+        // วาดพื้นหลังตาราง
+        pdf.setFillColor(250, 250, 250) // สีเทาอ่อนมาก
+        pdf.rect(tableStartX2, tableStartY2, tableWidth2, tableHeight2, 'F')
+
+        // วาดเส้นขอบตาราง
+        pdf.setDrawColor(0, 0, 0)
+        pdf.setLineWidth(0.1)
+
+        // วาดเส้นแนวนอน (20 เส้น สำหรับ 19 แถว)
+        for (let i = 0; i <= 19; i++) {
+            const y = tableStartY2 + (i * cellHeight2)
+            pdf.line(tableStartX2, y, tableStartX2 + tableWidth2, y)
+        }
+
+        // วาดเส้นแนวตั้ง (5 เส้น สำหรับ 4 คอลลัมน์)
+        const colPositions = [
+            tableStartX2,
+            tableStartX2 + col1Width2,
+            tableStartX2 + col1Width2 + col2Width2,
+            tableStartX2 + col1Width2 + col2Width2 + col3Width2,
+            tableStartX2 + tableWidth2
+        ]
+
+        colPositions.forEach(x => {
+            pdf.line(x, tableStartY2, x, tableStartY2 + tableHeight2)
+        })
+
+        // เพิ่มหัวตาราง
+        setFont('bold')
+        pdf.setFontSize(14)
+        pdf.text('ครั้งที่', tableStartX2 + (col1Width2 / 2), tableStartY2 + 5, { align: 'center' })
+        pdf.text('รายการ', tableStartX2 + col1Width2 + (col2Width2 / 2), tableStartY2 + 5, { align: 'center' })
+        pdf.text('ผลการตรวจสอบ', tableStartX2 + col1Width2 + col2Width2 + (col3Width2 / 2), tableStartY2 + 5, { align: 'center' })
+        pdf.text('หมายเหตุ', tableStartX2 + col1Width2 + col2Width2 + col3Width2 + (col4Width2 / 2), tableStartY2 + 5, { align: 'center' })
+
+        // เพิ่มข้อมูลในตาราง (แถวที่ 2-19)
+        setFont('normal')
+        pdf.setFontSize(14)
+
+        const tableData = [
+            'ข้อมูลพื้นฐานของสถานศึกษา',
+            'ข้อมูลครูผู้สอน',
+            'ข้อมูลรายวิชา',
+            'จำนวนนักเรียน',
+            'ระยะเวลาการเรียนการสอน',
+            'วัตถุประสงค์การเรียนรู้',
+            'สาระสำคัญ',
+            'กิจกรรมการเรียนรู้',
+            'สื่อและแหล่งเรียนรู้',
+            'การวัดและประเมินผล',
+            'ผลการเรียนรู้ที่คาดหวัง',
+            'การบูรณาการ',
+            'การใช้ภาษาไทย',
+            'ทักษะชีวิต',
+            'คุณลักษณะอันพึงประสงค์',
+            'การอ่าน คิด วิเคราะห์ เขียน',
+            'ลายมือชื่อครูผู้สอน',
+            'วันที่จัดทำ'
+        ]
+
+        for (let i = 0; i < tableData.length; i++) {
+            const rowY = tableStartY2 + ((i + 1) * cellHeight2) + 5
+
+            // ลำดับ
+            pdf.text(`${i + 1}`, tableStartX2 + (col1Width2 / 2), rowY, { align: 'center' })
+
+            // รายการ
+            pdf.text(tableData[i], tableStartX2 + col1Width2 + 3, rowY)
+
+            // ผลการตรวจสอบ (ว่าง)
+            pdf.text('', tableStartX2 + col1Width2 + col2Width2 + 3, rowY)
+
+            // หมายเหตุ (ว่าง)
+            pdf.text('', tableStartX2 + col1Width2 + col2Width2 + col3Width2 + 3, rowY)
+        }
+
+        // อัพเดท yPosition สำหรับเนื้อหาต่อไป
+        yPosition = tableStartY2 + tableHeight2 + 10
 
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
