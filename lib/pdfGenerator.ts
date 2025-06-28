@@ -217,6 +217,10 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setDrawColor(0, 0, 0) // สีดำ
         pdf.setLineWidth(0.2) // ลดความหนาของเส้นเป็น 0.2mm
 
+        // เพิ่ม background สีเทาให้ตาราง
+        pdf.setFillColor(240, 240, 240) // สีเทาอ่อน (RGB: 240, 240, 240)
+        pdf.rect(tableStartX, tableStartY, tableWidth, tableHeight, 'F') // วาดสี่เหลี่ยมสีเทา
+
         // วาดเส้นแนวนอน (5 เส้น สำหรับ 4 แถว) - ไม่วาดในคอลลัมน์ที่ 1 ที่ผสานแล้ว
         for (let i = 0; i <= 4; i++) {
             const y = tableStartY + (i * cellHeight)
@@ -465,63 +469,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             yPosition += 20
         }
 
-        // สรุปผลการประมวลผล
-        if (yPosition > 250) {
-            pdf.addPage()
-            yPosition = margins.top + 10
-        }
 
-        setFont('bold')
-        pdf.setFontSize(16)
-        pdf.text('สรุปผลการประมวลผล', margins.left, yPosition)
-        yPosition += 15
-
-        setFont('normal')
-        pdf.setFontSize(12)
-        pdf.text(`สถานะ: ${data.summary.success ? 'สำเร็จ' : 'ล้มเหลว'}`, margins.left, yPosition)
-        yPosition += 10
-        pdf.text(`จำนวนแหล่งข้อมูล: ${data.summary.totalDataSources} แหล่ง`, margins.left, yPosition)
-        yPosition += 10
-        pdf.text(`มีข้อมูล Excel: ${data.summary.hasExcelData ? 'มี' : 'ไม่มี'}`, margins.left, yPosition)
-        yPosition += 10
-        pdf.text(`มีข้อมูล PDF: ${data.summary.hasPdfData ? 'มี' : 'ไม่มี'}`, margins.left, yPosition)
-        yPosition += 20
-
-        // แสดงข้อมูลครูที่รับผิดชอบ (จาก Excel home_teacher)
-        if (data.excelData.hasData && data.excelData.data?.home_teacher) {
-            setFont('bold')
-            pdf.setFontSize(14)
-            pdf.text('ข้อมูลผู้รับผิดชอบ', margins.left, yPosition)
-            yPosition += 12
-
-            setFont('normal')
-            pdf.setFontSize(12)
-            pdf.text(`ครูที่รับผิดชอบ: ${data.excelData.data.home_teacher}`, margins.left, yPosition)
-            yPosition += 20
-        }
-
-        // ข้อมูลฐานข้อมูล (ถ้ามี)
-        if (data.database) {
-            setFont('bold')
-            pdf.setFontSize(14)
-            pdf.text('ข้อมูลการบันทึก', margins.left, yPosition)
-            yPosition += 12
-
-            setFont('normal')
-            pdf.setFontSize(10)
-            pdf.text(`Record ID: ${data.database.recordId}`, margins.left, yPosition)
-            yPosition += 8
-            pdf.text(`UUID: ${data.database.uuid}`, margins.left, yPosition)
-            yPosition += 8
-            pdf.text(`บันทึกเมื่อ: ${new Date(data.database.savedAt).toLocaleString('th-TH')}`, margins.left, yPosition)
-            yPosition += 15
-        }
-
-        // ส่วนท้าย
-        setFont('normal')
-        pdf.setFontSize(10)
-        pdf.text(`สร้างเมื่อ: ${data.formData.timestamp}`, margins.left, yPosition)
-        pdf.text(`ประมวลผลเมื่อ: ${data.formData.submittedAt}`, margins.left, yPosition + 10)
 
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
