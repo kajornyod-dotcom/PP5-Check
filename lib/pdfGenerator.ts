@@ -727,7 +727,7 @@ const drawTable = (
 
         // คอลลัมน์ที่ 3: ผลการตรวจสอบ (ใช้ไอคอน ถูก/ผิด หรือข้อความว่าง)
         const resultValue = results[i];
-        const iconSize = cellHeight * 0.7; // ขนาดไอคอนประมาณ 70% ของความสูงเซลล์
+        const iconSize = cellHeight * 0.6; // ลดขนาดไอคอนลงประมาณ 10%
         const iconX = colPositions[2] + (colWidths[2] - iconSize) / 2; // จัดกึ่งกลางไอคอนในคอลัมน์
         const iconY = rowY + (cellHeight - iconSize) / 2; // จัดกึ่งกลางไอคอนในแถว
 
