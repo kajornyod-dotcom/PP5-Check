@@ -201,7 +201,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const tableStartX = margins.left
         const tableStartY = margins.top
         const tableWidth = pageWidth - margins.left - margins.right // ความกว้างตารางพอดีกับขอบ
-        const tableHeight = 80 // เพิ่มความสูงตารางเป็น 80mm
+        const tableHeight = 40 // เพิ่มความสูงตารางเป็น 40mm
 
         // กำหนดความกว้างแต่ละคอลลัมน์ (10%, 80%, 10%)
         const col1Width = tableWidth * 0.2  // คอลลัมน์ 1: 10%
@@ -219,7 +219,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             pdf.line(tableStartX, y, tableStartX + tableWidth, y)
         }
 
-        // วาดเส้นแนวตั้ง (ปรับเพื่อผสานเซลล์ 1,2 กับ 1,3)
+         // วาดเส้นแนวตั้ง (ปรับเพื่อผสานเซลล์คอลลัมน์ที่ 1 ทั้งหมด 4 แถว)
         // เส้นแนวตั้งซ้ายสุด
         pdf.line(tableStartX, tableStartY, tableStartX, tableStartY + tableHeight)
 
@@ -235,7 +235,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         const tableEndX = tableStartX + tableWidth
         pdf.line(tableEndX, tableStartY, tableEndX, tableStartY + tableHeight)
 
-        // เพิ่มโลโก้ในเซลล์ (1,1) - แถวแรก คอลลัมน์แรก
+        // เพิ่มโลโก้ในคอลลัมน์ที่ 1 (ผสานทั้ง 4 แถว)
         try {
             const logoResponse = await fetch('/logo-ppk-512x512-1.png')
             if (logoResponse.ok) {
@@ -245,13 +245,13 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 )
                 const logoDataURL = `data:image/png;base64,${logoBase64}`
 
-                // คำนวณตำแหน่งกึ่งกลางของเซลล์ (1,1)
-                const logoSize = 15 // ขนาดโลโก้ 15mm
-                const logoX = tableStartX + (col1Width - logoSize) / 2 // จัดกึ่งกลางในเซลล์แรก
-                const logoY = tableStartY + (cellHeight - logoSize) / 2 // จัดกึ่งกลางในแถวแรก
+                // คำนวณตำแหน่งกึ่งกลางของคอลลัมน์ที่ 1 ที่ผสานทั้ง 4 แถว
+                const logoSize = 25 // ขนาดโลโก้ 25mm (เพิ่มขนาดเนื่องจากพื้นที่ใหญ่ขึ้น)
+                const logoX = tableStartX + (col1Width - logoSize) / 2 // จัดกึ่งกลางในคอลลัมน์ที่ 1
+                const logoY = tableStartY + (tableHeight - logoSize) / 2 // จัดกึ่งกลางในความสูงทั้งหมด
 
                 pdf.addImage(logoDataURL, 'PNG', logoX, logoY, logoSize, logoSize)
-                console.log('✅ เพิ่มโลโก้ในเซลล์ (1,1) สำเร็จ')
+                console.log('✅ เพิ่มโลโก้ในคอลลัมน์ที่ 1 (ผสาน 4 แถว) สำเร็จ')
             } else {
                 console.warn('⚠️ ไม่สามารถโหลดโลโก้ได้')
             }
