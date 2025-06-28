@@ -215,10 +215,18 @@ export async function POST(request: NextRequest) {
                 hasData: true,
                 sheetName: 'check',
                 data: excelData,
-                totalFields: Object.keys(excelData).length
+                totalFields: Object.keys(excelData).length,
+                // เพิ่มข้อมูลไฟล์ Excel
+                fileName: xlsxFile.name,
+                fileSize: xlsxFile.size,
+                uploadedAt: new Date().toISOString()
             } : {
                 hasData: false,
-                message: 'ไม่พบข้อมูลในชีท "check" หรือชีทว่าง'
+                message: 'ไม่พบข้อมูลในชีท "check" หรือชีทว่าง',
+                // เพิ่มข้อมูลไฟล์ Excel แม้ข้อมูลจะว่าง
+                fileName: xlsxFile.name,
+                fileSize: xlsxFile.size,
+                uploadedAt: new Date().toISOString()
             },
             // ข้อมูลจาก PDF OCR (Gemini)
             geminiOcrResult: pdfOcrResult ? {

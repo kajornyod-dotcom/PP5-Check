@@ -105,6 +105,10 @@ interface ExcelData {
     data?: { [key: string]: any }
     totalFields?: number
     message?: string
+    // ข้อมูลไฟล์ Excel (เพิ่ม)
+    fileName?: string
+    fileSize?: number
+    uploadedAt?: string
 }
 
 interface GeminiOcrData {
@@ -335,8 +339,51 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         setFont('normal')
         pdf.setFontSize(14)
         const contentStartY = tableStartY + tableHeight + 8 // เริ่มเนื้อหา 10mm ใต้ตาราง (ตารางสูง 80mm แล้ว)
-        pdf.text('ข้อมูลทั่วไป', margins.left, contentStartY)
-        let yPosition = contentStartY + 35 // เริ่มเนื้อหาหลัก
+        let yPosition = contentStartY // เริ่มเนื้อหาหลัก
+
+        // รายการไฟล์ Excel (ถ้ามีข้อมูล)
+        if (data.excelData.fileName || data.excelData.fileSize || data.excelData.uploadedAt) {
+            setFont('bold')
+            pdf.setFontSize(12)
+            pdf.text('รายการไฟล์ Excel:', margins.left, yPosition)
+            yPosition += 5
+
+            setFont('normal')
+            pdf.setFontSize(11)
+
+            // ชื่อไฟล์
+            if (data.excelData.fileName) {
+                pdf.text(`1. ชื่อไฟล์: ${data.excelData.fileName}`, margins.left + 5, yPosition)
+                yPosition += 5
+            }
+
+            // ขนาดไฟล์
+            if (data.excelData.fileSize) {
+                const fileSizeInKB = (data.excelData.fileSize / 1024).toFixed(2)
+                const fileSizeInMB = (data.excelData.fileSize / (1024 * 1024)).toFixed(2)
+                const displayFileSize = data.excelData.fileSize < 1024 * 1024
+                    ? `${fileSizeInKB} KB`
+                    : `${fileSizeInMB} MB`
+                pdf.text(`2. ขนาดไฟล์: ${displayFileSize}`, margins.left + 5, yPosition)
+                yPosition += 5
+            }
+
+            // วันที่อัพโหลด
+            if (data.excelData.uploadedAt) {
+                const uploadDate = new Date(data.excelData.uploadedAt).toLocaleString('th-TH', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                })
+                pdf.text(`3. อัพโหลดเมื่อ: ${uploadDate}`, margins.left + 5, yPosition)
+                yPosition += 5
+            }
+
+            yPosition += 10 // เพิ่มระยะห่าง
+        }
 
         // ข้อมูลจาก PDF OCR (Gemini)
         // if (data.geminiOcrResult.hasData && data.geminiOcrResult.data) {
