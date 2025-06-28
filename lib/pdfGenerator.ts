@@ -506,9 +506,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         setFont('normal')
         pdf.setFontSize(12) // ลดขนาดฟอนต์เล็กลงเพื่อให้พอดีกับการ wrap
 
+        // เฉพาะหน้าแรก: แสดงเฉพาะรายการที่ต้องการเท่านั้น
         const tableData = [
             'ปกหน้า (ปก)',
-            'รายการตรวจประเมิน (ตรวจ)',
             'รายการประเมินคุณลักษณะอันพึงประสงค์',
             'รายการประเมินการอ่าน คิด วิเคราะห์',
             'การให้ระดับผลการเรียน',
@@ -518,7 +518,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         setFont('normal')
         pdf.setFontSize(12)
 
-        // สร้างตารางตรวจสอบหน้าแรก (รายการที่ 1-7)
+        // สร้างตารางตรวจสอบหน้าแรก (เฉพาะรายการที่ต้องการ)
         for (let i = 0; i < tableData.length; i++) {
             const rowY = tableStartY2 + ((i + 1) * cellHeight2) + 3 // เริ่มต้นข้อความที่ด้านบนของเซลล์
 
