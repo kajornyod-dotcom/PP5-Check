@@ -128,10 +128,35 @@ function checkAdvisor(data: ReportData): CheckResult {
     return data.excelData.data?.home_advisor ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลครูที่ปรึกษา' }
 }
 
-// ตรวจสอบว่ามีข้อมูล KPA (02_k, 02_p, 02_a) อย่างน้อย 1 ช่องหรือไม่
+// ตรวจสอบว่าข้อมูล KPA (02_k, 02_p, 02_a, 02_midterm, 02_final) ต้องไม่ว่างและเป็นตัวเลข และ 02_total ต้องเท่ากับ 100
 function checkKPA(data: ReportData): CheckResult {
     const d = data.excelData.data
-    return (d?.['02_k'] || d?.['02_p'] || d?.['02_a']) ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูล KPA' }
+
+    // ตรวจสอบแต่ละช่องและแยกข้อความ error
+    const fieldLabels: Record<string, string> = {
+        '02_k': 'K',
+        '02_p': 'P',
+        '02_a': 'A',
+        '02_midterm': 'คะแนนกลางภาค',
+        '02_final': 'คะแนนปลายภาค'
+    }
+    for (const key of Object.keys(fieldLabels)) {
+        const val = d?.[key]
+        if (val === undefined || val === null || val === '') {
+            return { value: '0', message: `ไม่มีข้อมูล${fieldLabels[key]}` }
+        }
+        if (isNaN(Number(val))) {
+            return { value: '0', message: `${fieldLabels[key]} ต้องเป็นตัวเลข` }
+        }
+    }
+
+    // ตรวจสอบว่า 02_total ต้องเท่ากับ 100
+    const total = Number(d?.['02_total'])
+    if (isNaN(total) || total !== 100) {
+        return { value: '0', message: 'คะแนนรวมในหน้า 02 ต้องเท่ากับ 100' }
+    }
+
+    return { value: '1' }
 }
 
 // ตรวจสอบว่ามีข้อมูลเวลาเรียนรวมและหน่วยกิตหรือไม่ (ต้องเป็นตัวเลขทั้งคู่)
