@@ -263,8 +263,13 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.text('รายการตรวจก่อนกลางภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
 
-        // ตรวจสอบข้อมูลหน้าปก
-        const coverPageCheckResult = checkCoverPageData(data);
+        // ตรวจสอบข้อมูลทุกรายการสำหรับหน้าก่อนกลางภาค
+        const preMidtermResults = checkPreMidtermItems(data)
+        console.log('✅ preMidtermResults:', preMidtermResults) // สำหรับ debug
+
+        // แยก value กับ message ออกเป็น 2 array
+        const resultValues = preMidtermResults.map(r => r.value)
+        const resultMessages = preMidtermResults.map(r => r.message || '')
 
         yPosition = drawTable(
             pdf,
@@ -272,7 +277,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             yPosition,
             pageWidth - margins.left - margins.right,
             8,
-            ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ'],
+            [
+                'ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ'
+            ],
             [
                 'ข้อมูลระดับชั้น (ปก)',
                 'ข้อมูลห้องเรียน (ปก)',
@@ -290,8 +297,8 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'คะแนนเต็มก่อนกลางภาค (04,05)',
             ],
             setFont,
-            [coverPageCheckResult, '', '', '', ''], // ส่งผลการตรวจสอบสำหรับแต่ละรายการ
-            ['', '', '', '', ''] // ส่งหมายเหตุ (ตอนนี้ยังว่าง)
+            resultValues,    // ส่ง value ไปช่องผลการตรวจ
+            resultMessages   // ส่ง message ไปช่องหมายเหตุ
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
         // ======= หน้า 2 =======
@@ -345,6 +352,34 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
             // ไม่ส่ง results และ notes สำหรับหน้านี้ เพราะยังไม่มี logic การตรวจสอบ
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
+
+        yPosition = drawTable(
+            pdf,
+            margins.left,
+            yPosition,
+            pageWidth - margins.left - margins.right,
+            8,
+            ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ'],
+            [
+                'ข้อมูลระดับชั้น (ปก)',
+                'ข้อมูลห้องเรียน (ปก)',
+                'ภาคเรียน (ปก)',
+                'ปีการศึกษา (ปก)',
+                'ข้อมูลรายวิชา (ปก)',
+                'รหัสวิชา (ปก)',
+                'ข้อมูลกลุ่มสาระ (ปก)',
+                'หน่วยกิต (ปก)',
+                'เวลาเรียน (ปก)',
+                'ครูผู้สอน (ปก)',
+                'ครูที่ปรึกษา (ปก)',
+                'ความถูกต้องของ KPA (02)',
+                'เวลาเรียนรวมสอดคล้องกับหน่วยกิต (03)',
+                'คะแนนเต็มก่อนกลางภาค (04,05)',
+            ],
+            setFont,
+            resultValues, // ส่ง value ไปช่องผลการตรวจ
+            resultMessages // ส่ง message ไปช่องหมายเหตุ
+        )
 
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
@@ -453,29 +488,6 @@ const addHeaderToAllPages = async (pdf: jsPDF, data: ReportData, hasThaiFont: bo
     }
 }
 
-/**
- * ฟังก์ชันสำหรับตรวจสอบข้อมูลในหน้าปก (ปีการศึกษาและภาคเรียน)
- * @param data ข้อมูล ReportData
- * @returns '1' ถ้าข้อมูลตรงกัน, '0' ถ้าไม่ตรงกัน, หรือ '' ถ้าไม่มีข้อมูล Excel
- */
-const checkCoverPageData = (data: ReportData): '1' | '0' | '' => {
-    const excelAcademicYear = data.excelData.data?.home_academic_year;
-    const excelSemester = data.excelData.data?.home_semester;
-    const formAcademicYear = data.formData.academicYear;
-    const formSemester = data.formData.semester;
-
-    // ตรวจสอบว่ามีข้อมูลจาก Excel และ Form ครบถ้วนหรือไม่
-    if (!excelAcademicYear || !excelSemester || !formAcademicYear || !formSemester) {
-        return ''; // ไม่มีข้อมูลให้ตรวจสอบ
-    }
-
-    // เปรียบเทียบปีการศึกษาและภาคเรียน
-    if (excelAcademicYear === formAcademicYear && excelSemester === formSemester) {
-        return '1'; // ตรงกัน
-    } else {
-        return '0'; // ไม่ตรงกัน
-    }
-}
 
 // ====== Helper: Draw Table (Refactored) ======
 const drawTable = (

@@ -1,6 +1,6 @@
 import { ReportData } from './pdfTypes'
 
-export type CheckResult = '1' | '0' | ''
+export type CheckResult = { value: '1' | '0' | '', message?: string }
 
 export function checkPreMidtermItems(data: ReportData): CheckResult[] {
     return [
@@ -23,44 +23,60 @@ export function checkPreMidtermItems(data: ReportData): CheckResult[] {
 
 // ตรวจสอบว่ามีข้อมูลระดับชั้นหรือไม่
 function checkGradeLevel(data: ReportData): CheckResult {
-    return data.excelData.data?.home_grade_level ? '1' : '0'
+    return data.excelData.data?.home_grade_level ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลระดับชั้น' }
 }
 
 // ตรวจสอบว่ามีข้อมูลห้องเรียนหรือไม่
 function checkRoom(data: ReportData): CheckResult {
-    return data.excelData.data?.home_room ? '1' : '0'
+    return data.excelData.data?.home_room ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลห้องเรียน' }
 }
 
 // ตรวจสอบว่าข้อมูลภาคเรียนในฟอร์ม ตรงกับข้อมูลใน excel หรือไม่
 function checkSemester(data: ReportData): CheckResult {
     const formSemester = data.formData.semester
     const excelSemester = data.excelData.data?.home_semester
-    if (formSemester == null || excelSemester == null) return '0'
-    return String(formSemester) === String(excelSemester) ? '1' : '0'
+    if (formSemester == null || excelSemester == null) {
+        return { value: '0', message: 'ข้อมูลภาคเรียนไม่ครบถ้วน' }
+    }
+    if (String(formSemester) === String(excelSemester)) {
+        return { value: '1' }
+    }
+    return {
+        value: '0',
+        message: `ภาคเรียนในฟอร์ม (${formSemester}) ไม่ตรงกับไฟล์ Excel (${excelSemester})`
+    }
 }
 
 // ตรวจสอบว่าข้อมูลปีการศึกษาในฟอร์ม ตรงกับข้อมูลใน excel หรือไม่
 function checkAcademicYear(data: ReportData): CheckResult {
     const formYear = data.formData.academicYear
     const excelYear = data.excelData.data?.home_academic_year
-    if (formYear == null || excelYear == null) return '0'
-    return String(formYear) === String(excelYear) ? '1' : '0'
+    if (formYear == null || excelYear == null) {
+        return { value: '0', message: 'ข้อมูลปีการศึกษาไม่ครบถ้วน' }
+    }
+    if (String(formYear) === String(excelYear)) {
+        return { value: '1' }
+    }
+    return {
+        value: '0',
+        message: `ปีการศึกษาในฟอร์ม (${formYear}) ไม่ตรงกับไฟล์ Excel (${excelYear})`
+    }
 }
 
 // ตรวจสอบว่ามีข้อมูลรายวิชาหรือไม่
 function checkSubject(data: ReportData): CheckResult {
-    return data.excelData.data?.home_subject ? '1' : '0'
+    return data.excelData.data?.home_subject ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลรายวิชา' }
 }
 
-// ตรวจสอบว่ารหัสวิชาสอดคล้องกับกลุ่มสาระและระดับชั้นหรือไม่
+// ตัวอย่าง: ตรวจสอบว่ารหัสวิชาสอดคล้องกับกลุ่มสาระและระดับชั้นหรือไม่
 function checkSubjectCode(data: ReportData): CheckResult {
     const code = data.excelData.data?.home_subject_code
     const learningArea = data.excelData.data?.home_learning_area
     const gradeLevel = data.excelData.data?.home_grade_level
 
-    if (!code || typeof code !== 'string' || code.length < 2 || !learningArea || !gradeLevel) return '0'
+    if (!code || typeof code !== 'string' || code.length < 2 || !learningArea || !gradeLevel)
+        return { value: '0', message: 'ไม่มีข้อมูลรหัสวิชา/กลุ่มสาระ/ระดับชั้น' }
 
-    // ตรวจสอบกลุ่มสาระจากตัวอักษรตัวแรก
     const areaMap: Record<string, string> = {
         'ว': 'วิทยาศาสตร์และเทคโนโลยี',
         'ค': 'คณิตศาสตร์',
@@ -70,63 +86,63 @@ function checkSubjectCode(data: ReportData): CheckResult {
         'ศ': 'ศิลปะ',
         'พ': 'สุขศึกษาและพลศึกษา',
         'ง': 'การงานอาชีพ',
-        // เพิ่มเติมตามกลุ่มสาระที่ใช้จริง
     }
     const areaFromCode = areaMap[code[0]]
-    if (areaFromCode && areaFromCode !== learningArea) return '0'
+    if (areaFromCode && areaFromCode !== learningArea)
+        return { value: '0', message: 'กลุ่มสาระไม่ตรงกับรหัสวิชา' }
 
-    // ตรวจสอบช่วงชั้นจากหลักที่ 2
-    // 2 = ม.1-ม.3, 3 = ม.4-ม.6
     const levelDigit = code[1]
-    if (levelDigit === '2' && !/^ม\.([123])$/.test(gradeLevel)) return '0'
-    if (levelDigit === '3' && !/^ม\.([456])$/.test(gradeLevel)) return '0'
+    if (levelDigit === '2' && !/^ม\.([123])$/.test(gradeLevel))
+        return { value: '0', message: 'รหัสวิชาระบุช่วงชั้น ม.1-3 แต่ระดับชั้นไม่ตรง' }
+    if (levelDigit === '3' && !/^ม\.([456])$/.test(gradeLevel))
+        return { value: '0', message: 'รหัสวิชาระบุช่วงชั้น ม.4-6 แต่ระดับชั้นไม่ตรง' }
 
-    return '1'
+    return { value: '1' }
 }
 
 // ตรวจสอบว่ามีข้อมูลกลุ่มสาระหรือไม่
 function checkLearningArea(data: ReportData): CheckResult {
-    return data.excelData.data?.home_learning_area ? '1' : '0'
+    return data.excelData.data?.home_learning_area ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลกลุ่มสาระ' }
 }
 
 // ตรวจสอบว่ามีข้อมูลหน่วยกิตหรือไม่ (ต้องเป็นตัวเลข)
 function checkCredit(data: ReportData): CheckResult {
-    return typeof data.excelData.data?.home_credit === 'number' ? '1' : '0'
+    return typeof data.excelData.data?.home_credit === 'number' ? { value: '1' } : { value: '0', message: 'หน่วยกิตต้องเป็นตัวเลข' }
 }
 
 // ตรวจสอบว่าข้อมูลเวลาเรียนเป็น 2 เท่าของหน่วยกิตหรือไม่ (และต้องเป็นตัวเลขทั้งคู่)
 function checkStudyTime(data: ReportData): CheckResult {
     const studyTime = data.excelData.data?.home_study_time
     const credit = data.excelData.data?.home_credit
-    if (typeof studyTime !== 'number' || typeof credit !== 'number') return '0'
-    return studyTime === credit * 2 ? '1' : '0'
+    if (typeof studyTime !== 'number' || typeof credit !== 'number') return { value: '0', message: 'เวลาเรียนและหน่วยกิตต้องเป็นตัวเลข' }
+    return studyTime === credit * 2 ? { value: '1' } : { value: '0', message: 'เวลาเรียนต้องเป็น 2 เท่าของหน่วยกิต' }
 }
 
 // ตรวจสอบว่ามีข้อมูลครูผู้สอนหรือไม่
 function checkTeacher(data: ReportData): CheckResult {
-    return data.excelData.data?.home_teacher ? '1' : '0'
+    return data.excelData.data?.home_teacher ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลครูผู้สอน' }
 }
 
 // ตรวจสอบว่ามีข้อมูลครูที่ปรึกษาหรือไม่
 function checkAdvisor(data: ReportData): CheckResult {
-    return data.excelData.data?.home_advisor ? '1' : '0'
+    return data.excelData.data?.home_advisor ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลครูที่ปรึกษา' }
 }
 
 // ตรวจสอบว่ามีข้อมูล KPA (02_k, 02_p, 02_a) อย่างน้อย 1 ช่องหรือไม่
 function checkKPA(data: ReportData): CheckResult {
     const d = data.excelData.data
-    return (d?.['02_k'] || d?.['02_p'] || d?.['02_a']) ? '1' : '0'
+    return (d?.['02_k'] || d?.['02_p'] || d?.['02_a']) ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูล KPA' }
 }
 
 // ตรวจสอบว่ามีข้อมูลเวลาเรียนรวมและหน่วยกิตหรือไม่ (ต้องเป็นตัวเลขทั้งคู่)
 function checkHourCredit(data: ReportData): CheckResult {
     const d = data.excelData.data
-    return (typeof d?.['03_total_hour'] === 'number' && typeof d?.home_credit === 'number') ? '1' : '0'
+    return (typeof d?.['03_total_hour'] === 'number' && typeof d?.home_credit === 'number') ? { value: '1' } : { value: '0', message: 'เวลาเรียนรวมและหน่วยกิตต้องเป็นตัวเลข' }
 }
 
 // ตรวจสอบว่ามีข้อมูลคะแนนเต็มก่อนกลางภาค (02_midterm) หรือไม่
 function checkMidtermScore(data: ReportData): CheckResult {
-    return data.excelData.data?.['02_midterm'] ? '1' : '0'
+    return data.excelData.data?.['02_midterm'] ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลคะแนนเต็มก่อนกลางภาค' }
 }
 
 // สามารถเพิ่ม checkMidtermItems, checkFinalItems ได้ในไฟล์นี้
