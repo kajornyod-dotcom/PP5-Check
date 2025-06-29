@@ -294,7 +294,7 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'ครูที่ปรึกษา (ปก)',
                 'ความถูกต้องของ KPA (02)',
                 'เวลาเรียนรวมสอดคล้องกับหน่วยกิต (03)',
-                'คะแนนเต็มก่อนกลางภาค (04,05)',
+                'คะแนนเต็ม (06)',
             ],
             setFont,
             resultValues,    // ส่ง value ไปช่องผลการตรวจ

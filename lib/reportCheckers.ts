@@ -165,9 +165,33 @@ function checkHourCredit(data: ReportData): CheckResult {
     return (typeof d?.['03_total_hour'] === 'number' && typeof d?.home_credit === 'number') ? { value: '1' } : { value: '0', message: 'เวลาเรียนรวมและหน่วยกิตต้องเป็นตัวเลข' }
 }
 
-// ตรวจสอบว่ามีข้อมูลคะแนนเต็มก่อนกลางภาค (02_midterm) หรือไม่
+// ตรวจสอบว่ามีข้อมูลคะแนนเต็มก่อนกลางภาค (06_total_before_modterm, 06_total_midterm, 06_total_after_modterm, 06_total_final, 06_total_score) หรือไม่
 function checkMidtermScore(data: ReportData): CheckResult {
-    return data.excelData.data?.['02_midterm'] ? { value: '1' } : { value: '0', message: 'ไม่มีข้อมูลคะแนนเต็มก่อนกลางภาค' }
+    const d = data.excelData.data
+    const fields = [
+        '06_total_before_modterm',
+        '06_total_midterm',
+        '06_total_after_modterm',
+        '06_total_final',
+        '06_total_score'
+    ]
+    const fieldLabels: Record<string, string> = {
+        '06_total_before_modterm': 'คะแนนเต็มก่อนกลางภาค',
+        '06_total_midterm': 'คะแนนเต็มกลางภาค',
+        '06_total_after_modterm': 'คะแนนเต็มหลังกลางภาค',
+        '06_total_final': 'คะแนนเต็มปลายภาค',
+        '06_total_score': 'คะแนนเต็มรวม'
+    }
+    const missing: string[] = []
+    for (const key of fields) {
+        if (!d?.[key]) {
+            missing.push(fieldLabels[key])
+        }
+    }
+    if (missing.length > 0) {
+        return { value: '0', message: `ไม่มีข้อมูลหรือข้อมูลไม่ถูกต้องในช่อง: ${missing.join(', ')}` }
+    }
+    return { value: '1' }
 }
 
 // สามารถเพิ่ม checkMidtermItems, checkFinalItems ได้ในไฟล์นี้
