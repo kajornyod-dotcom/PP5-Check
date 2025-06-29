@@ -199,22 +199,22 @@ export function checkMidtermItems(data: ReportData): CheckResult[] {
     const d = data.excelData.data;
 
     // 1. บันทึกเวลาเรียน (03)
-    const hasStudyRecord = typeof d?.['03_total_hour'] === 'number' && d['03_total_hour'] > 0;
+    const hasStudyRecord = !!d?.['03_check_valid_hour_midterm'];
     const studyRecordResult: CheckResult = hasStudyRecord
         ? { value: '1' }
-        : { value: '0', message: 'ไม่มีข้อมูลบันทึกเวลาเรียน' };
+        : { value: '0', message: 'กรุณาบันทึกเวลาเรียนให้ครบจำนวน 10 สัปดาห์' };
 
     // 2. คะแนนก่อนกลาง (04)
-    const hasBeforeMidterm = typeof d?.['04_before_midterm'] === 'number' && d['04_before_midterm'] > 0;
+    const hasBeforeMidterm = !!d?.['06_before_midterm_percent_valid'];
     const beforeMidtermResult: CheckResult = hasBeforeMidterm
         ? { value: '1' }
-        : { value: '0', message: 'ไม่มีข้อมูลคะแนนก่อนกลางภาค' };
+        : { value: '0', message: 'กรุณากรอกคะแนนก่อนกลางภาคให้ครบถ้วน' };
 
     // 3. คะแนนกลางภาค (04)
-    const hasMidterm = typeof d?.['04_midterm'] === 'number' && d['04_midterm'] > 0;
+    const hasMidterm = !!d?.['06_midterm_percent_valid'];
     const midtermResult: CheckResult = hasMidterm
         ? { value: '1' }
-        : { value: '0', message: 'ไม่มีข้อมูลคะแนนกลางภาค' };
+        : { value: '0', message: 'กรุณากรอกคะแนนกลางภาคให้ครบถ้วน' };
 
     return [studyRecordResult, beforeMidtermResult, midtermResult];
 }
