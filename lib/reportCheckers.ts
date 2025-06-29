@@ -194,4 +194,29 @@ function checkMidtermScore(data: ReportData): CheckResult {
     return { value: '1' }
 }
 
-// สามารถเพิ่ม checkMidtermItems, checkFinalItems ได้ในไฟล์นี้
+// ตรวจสอบข้อมูลกลางภาค
+export function checkMidtermItems(data: ReportData): CheckResult[] {
+    const d = data.excelData.data;
+
+    // 1. บันทึกเวลาเรียน (03)
+    const hasStudyRecord = typeof d?.['03_total_hour'] === 'number' && d['03_total_hour'] > 0;
+    const studyRecordResult: CheckResult = hasStudyRecord
+        ? { value: '1' }
+        : { value: '0', message: 'ไม่มีข้อมูลบันทึกเวลาเรียน' };
+
+    // 2. คะแนนก่อนกลาง (04)
+    const hasBeforeMidterm = typeof d?.['04_before_midterm'] === 'number' && d['04_before_midterm'] > 0;
+    const beforeMidtermResult: CheckResult = hasBeforeMidterm
+        ? { value: '1' }
+        : { value: '0', message: 'ไม่มีข้อมูลคะแนนก่อนกลางภาค' };
+
+    // 3. คะแนนกลางภาค (04)
+    const hasMidterm = typeof d?.['04_midterm'] === 'number' && d['04_midterm'] > 0;
+    const midtermResult: CheckResult = hasMidterm
+        ? { value: '1' }
+        : { value: '0', message: 'ไม่มีข้อมูลคะแนนกลางภาค' };
+
+    return [studyRecordResult, beforeMidtermResult, midtermResult];
+}
+
+// สามารถเพิ่ม checkFinalItems ได้ในไฟล์นี้
