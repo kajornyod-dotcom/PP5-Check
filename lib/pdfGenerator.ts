@@ -361,34 +361,6 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
 
-        yPosition = drawTable(
-            pdf,
-            margins.left,
-            yPosition,
-            pageWidth - margins.left - margins.right,
-            8,
-            ['ลำดับที่', 'รายการ', 'ผลการตรวจ', 'หมายเหตุ'],
-            [
-                'ข้อมูลระดับชั้น (ปก)',
-                'ข้อมูลห้องเรียน (ปก)',
-                'ภาคเรียน (ปก)',
-                'ปีการศึกษา (ปก)',
-                'ข้อมูลรายวิชา (ปก)',
-                'รหัสวิชา (ปก)',
-                'ข้อมูลกลุ่มสาระ (ปก)',
-                'หน่วยกิต (ปก)',
-                'เวลาเรียน (ปก)',
-                'ครูผู้สอน (ปก)',
-                'ครูที่ปรึกษา (ปก)',
-                'ความถูกต้องของ KPA (02)',
-                'เวลาเรียนรวมสอดคล้องกับหน่วยกิต (03)',
-                'คะแนนเต็มก่อนกลางภาค (04,05)',
-            ],
-            setFont,
-            resultValues, // ส่ง value ไปช่องผลการตรวจ
-            resultMessages // ส่ง message ไปช่องหมายเหตุ
-        )
-
         // สร้างและเพิ่ม QR Code ลงในทุกหน้า PDF (ถ้ามี UUID)
         if (data.database?.uuid) {
             try {
