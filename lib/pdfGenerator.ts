@@ -562,21 +562,20 @@ const drawTable = (
     for (let i = 0; i < data.length; i++) {
         const rowY = startY + ((i + 1) * cellHeight);
 
-        // ใช้ baseline: 'middle' และวางที่กึ่งกลางเซลล์
+        // กึ่งกลางแนวตั้ง
         const textBaselineY = rowY + (cellHeight / 2);
 
-        // คอลลัมน์ที่ 1: หมายเลขลำดับ (จัดกึ่งกลางทั้งแนวนอนและแนวตั้ง)
-        const sequenceNumber = (i + 1).toString();
+        // คอลัมน์ที่ 1: หมายเลขลำดับ
         const seqX = colPositions[0] + (colWidths[0] / 2);
-        pdf.text(sequenceNumber, seqX, textBaselineY, { align: 'center', baseline: 'middle' });
+        pdf.text((i + 1).toString(), seqX, textBaselineY, { align: 'center', baseline: 'middle' });
 
-        // คอลลัมน์ที่ 2: รายการ - ใช้ฟังก์ชัน wrapTextInCell
+        // คอลัมน์ที่ 2: รายการ
         const maxTextWidth = colWidths[1] - 6;
         wrapTextInCell(
             pdf,
             data[i],
             colPositions[1] + 3,
-            rowY + 3,
+            textBaselineY, // ใช้กึ่งกลางเซลล์
             maxTextWidth,
             4,
             colWidths[1],
@@ -585,7 +584,7 @@ const drawTable = (
             true
         );
 
-        // คอลลัมน์ที่ 3: ผลการตรวจสอบ (ใช้ไอคอน ถูก/ผิด หรือข้อความว่าง)
+        // คอลัมน์ที่ 3: ผลการตรวจสอบ
         const resultValue = results[i];
         const iconSize = cellHeight * 0.6; // ลดขนาดไอคอนลงประมาณ 10%
         const iconX = colPositions[2] + (colWidths[2] - iconSize) / 2; // จัดกึ่งกลางไอคอนในคอลัมน์
@@ -602,10 +601,10 @@ const drawTable = (
             pdf.text(resultText, resultX, textBaselineY, { align: 'center' });
         }
 
-        // คอลลัมน์ที่ 4: หมายเหตุ (จัดกึ่งกลาง)
+        // คอลัมน์ที่ 4: หมายเหตุ
         const noteText = notes[i] || '';
         const noteX = colPositions[3] + (colWidths[3] / 2);
-        pdf.text(noteText, noteX, textBaselineY, { align: 'center' });
+        pdf.text(noteText, noteX, textBaselineY, { align: 'center', baseline: 'middle' });
     }
 
     return startY + tableHeight + 10
