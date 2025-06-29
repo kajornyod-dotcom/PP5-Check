@@ -2,7 +2,7 @@ import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { ReportData } from './pdfTypes'
 import { wrapTextInCell, generateQRCode, loadThaiFont, loadImageAsBase64 } from './pdfUtils'
-import { checkPreMidtermItems } from './reportCheckers'
+import { checkPreMidtermItems, checkMidtermItems } from './reportCheckers'
 
 // ฟังก์ชันสำหรับ render ตารางส่วนหัวและรายการไฟล์ Excel ในทุกหน้า
 const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasThaiFont: boolean, margins: any) => {
@@ -308,6 +308,12 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจกลางภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
+
+        // ใช้ checkMidtermItems เพื่อดึงผลตรวจสอบกลางภาค
+        const midtermResults = checkMidtermItems(data)
+        const midtermResultValues = midtermResults.map(r => r.value)
+        const midtermResultMessages = midtermResults.map(r => r.message || '')
+
         yPosition = drawTable(
             pdf,
             margins.left,
@@ -320,8 +326,9 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'คะแนนก่อนกลาง (04)',
                 'คะแนนกลางภาค (04)'
             ],
-            setFont
-            // ไม่ส่ง results และ notes สำหรับหน้านี้ เพราะยังไม่มี logic การตรวจสอบ
+            setFont,
+            midtermResultValues,    // ส่ง value ไปช่องผลการตรวจ
+            midtermResultMessages   // ส่ง message ไปช่องหมายเหตุ
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
         // ======= หน้า 3 =======
