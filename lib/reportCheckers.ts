@@ -143,7 +143,7 @@ function checkKPA(data: ReportData): CheckResult {
     for (const key of Object.keys(fieldLabels)) {
         const val = d?.[key]
         if (val === undefined || val === null || val === '') {
-            return { value: '0', message: `ไม่มีข้อมูล${fieldLabels[key]}` }
+            return { value: '0', message: `ไม่มีข้อมูล ${fieldLabels[key]}` }
         }
         if (isNaN(Number(val))) {
             return { value: '0', message: `${fieldLabels[key]} ต้องเป็นตัวเลข` }
