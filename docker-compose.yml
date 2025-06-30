@@ -8,6 +8,6 @@ services:
       - NODE_ENV=production
     env_file:
       - .env
-    volumes:
-      - .:/app
+    # volumes:
+    #   - .:/app
     restart: always
