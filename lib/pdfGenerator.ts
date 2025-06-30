@@ -174,34 +174,40 @@ const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasTha
 // ฟังก์ชันสำหรับเพิ่ม QR Code ในทุกหน้าของ PDF
 const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
     try {
-        const qrCodeDataURL = await generateQRCode(uuid)
-        const pageWidth = pdf.internal.pageSize.getWidth()
-        const pageHeight = pdf.internal.pageSize.getHeight()
-        const qrSize = 25
-        const qrX = pageWidth - qrSize - 10
-        const qrY = pageHeight - qrSize - 10
+        // ดึง domain จาก .env (ฝั่ง client ต้องใช้ NEXT_PUBLIC_*
+        const baseUrl =
+            process.env.NEXT_PUBLIC_BASE_URL ||
+            (typeof window !== "undefined" ? window.location.origin : "https://yourdomain");
 
-        const totalPages = pdf.getNumberOfPages()
+        const qrUrl = `${baseUrl}/verify?uuid=${encodeURIComponent(uuid)}`;
+        const qrCodeDataURL = await generateQRCode(qrUrl);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const qrSize = 25;
+        const qrX = pageWidth - qrSize - 10;
+        const qrY = pageHeight - qrSize - 10;
+
+        const totalPages = pdf.getNumberOfPages();
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-            pdf.setPage(pageNum)
-            pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize)
-            pdf.setFont('helvetica')
-            pdf.setFontSize(5)
-            const textY = qrY + qrSize + 3
-            const centerX = qrX + (qrSize / 2)
-            pdf.text(uuid, centerX, textY, { align: 'center' })
+            pdf.setPage(pageNum);
+            pdf.addImage(qrCodeDataURL, "PNG", qrX, qrY, qrSize, qrSize);
+            pdf.setFont("helvetica");
+            pdf.setFontSize(5);
+            const textY = qrY + qrSize + 3;
+            const centerX = qrX + qrSize / 2;
+            pdf.text("🔎 verify me", centerX, textY, { align: "center" });
         }
     } catch (qrError) {
-        console.warn('⚠️ ไม่สามารถสร้าง QR Code ได้:', qrError)
+        console.warn("⚠️ ไม่สามารถสร้าง QR Code ได้:", qrError);
 
         // ถ้าสร้าง QR Code ไม่ได้ ให้แสดง UUID เป็นข้อความในหน้าแรกแทน
-        pdf.setPage(1)
-        pdf.setFont('helvetica')
-        pdf.setFontSize(8)
-        const pageWidth = pdf.internal.pageSize.getWidth()
-        const pageHeight = pdf.internal.pageSize.getHeight()
-        pdf.text('UUID:', pageWidth - 60, pageHeight - 15)
-        pdf.text(uuid, pageWidth - 60, pageHeight - 10)
+        pdf.setPage(1);
+        pdf.setFont("helvetica");
+        pdf.setFontSize(8);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        pdf.text("UUID:", pageWidth - 60, pageHeight - 15);
+        pdf.text(uuid, pageWidth - 60, pageHeight - 10);
     }
 }
 
