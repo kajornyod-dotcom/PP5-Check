@@ -2,7 +2,7 @@ import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { ReportData } from './pdfTypes'
 import { wrapTextInCell, generateQRCode, loadThaiFont, loadImageAsBase64 } from './pdfUtils'
-import { checkPreMidtermItems, checkMidtermItems } from './reportCheckers'
+import { checkPreMidtermItems, checkMidtermItems, checkFinalItems } from './reportCheckers'
 
 // ฟังก์ชันสำหรับ render ตารางส่วนหัวและรายการไฟล์ Excel ในทุกหน้า
 const renderHeaderTableAndFileInfo = async (pdf: jsPDF, data: ReportData, hasThaiFont: boolean, margins: any) => {
@@ -338,6 +338,12 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
         pdf.setFontSize(14)
         pdf.text('รายการตรวจปลายภาค', pageWidth / 2, yPosition + 3, { align: 'center' })
         yPosition += 10
+
+        // ใช้ checkFinalItems เพื่อดึงผลตรวจสอบปลายภาค
+        const finalResults = checkFinalItems(data)
+        const finalResultValues = finalResults.map(r => r.value)
+        const finalResultMessages = finalResults.map(r => r.message || '')
+
         yPosition = drawTable(
             pdf,
             margins.left,
@@ -351,13 +357,14 @@ export const generatePDF = async (data: ReportData): Promise<void> => {
                 'คะแนนสอบปลายภาค (05)',
                 'ตรวจสอบการให้ระดับผลการเรียน (06)',
                 'คะแนนสมรรถนะ (07)',
-                'คะคุณลักษณะอันพึงประสงค์ (08)',
+                'คุณลักษณะอันพึงประสงค์ (08)',
                 'คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)',
                 'สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)',
                 'สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)'
             ],
-            setFont
-            // ไม่ส่ง results และ notes สำหรับหน้านี้ เพราะยังไม่มี logic การตรวจสอบ
+            setFont,
+            finalResultValues,
+            finalResultMessages
         )
         renderSignatureSection(pdf, margins.left, yPosition, pageWidth, hasThaiFont)
 

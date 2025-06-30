@@ -219,4 +219,50 @@ export function checkMidtermItems(data: ReportData): CheckResult[] {
     return [studyRecordResult, beforeMidtermResult, midtermResult];
 }
 
-// สามารถเพิ่ม checkFinalItems ได้ในไฟล์นี้
+// ตรวจสอบข้อมูลปลายภาค
+export function checkFinalItems(data: ReportData): CheckResult[] {
+    const d = data.excelData.data;
+
+    // 1. บันทึกเวลาเรียน (03)
+    const studyRecordResult: CheckResult = d?.['03_check_valid_hour_final']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณาบันทึกเวลาเรียนหลังกลางภาคให้ครบ' };
+
+    // 2. คะแนนหลังกลางภาค (05)
+    const afterMidtermResult: CheckResult = d?.['06_after_midterm_percent_valid']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณากรอกคะแนนหลังกลางภาคให้ครบถ้วน' };
+
+    // 3. คะแนนสอบปลายภาค (05)
+    const finalScoreResult: CheckResult = d?.['06_final_percent_valid']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณากรอกคะแนนปลายภาคให้ครบถ้วน' };
+
+    // 4. ตรวจสอบการให้ระดับผลการเรียน (06)
+    const gradeResult: CheckResult = d?.['06_grade_percent_valid']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณาตรวจสอบการให้ระดับผลการเรียน' };
+
+    // 5. คะแนนสมรรถนะ (07)
+    const competencyResult: CheckResult = d?.['07_competency_percent_valid']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณากรอกคะแนนสมรรถนะให้ครบถ้วน' };
+
+    // 6. คะแนนคุณลักษณะอันพึงประสงค์ (08)
+    const attitudeResult: CheckResult = d?.['08_attitude_count_percent_valid']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณากรอกคะแนนคุณลักษณะฯ ให้ครบถ้วน' };
+
+    // 7. คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)
+    const readAnalyzeWriteResult: CheckResult = d?.['09_read_analyze_write_percent_valid']
+        ? { value: '1' }
+        : { value: '0', message: 'กรุณากรอกคะแนนการอ่านฯ ให้ครบถ้วน' };
+
+    // 8. สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)
+    const sgsAttitudeResult: CheckResult = !data.geminiOcrResult.hasData ? { value: '', message: 'ไม่มีข้อมูล SGS' } : data.geminiOcrResult.data?.attitude_valid ? { value: '1' } : { value: '0', message: 'ไม่ผ่านเกณฑ์' };
+
+    // 9. สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)
+    const sgsReadAnalyzeWriteResult: CheckResult = !data.geminiOcrResult.hasData ? { value: '', message: 'ไม่มีข้อมูล SGS' } : data.geminiOcrResult.data?.read_analyze_write_valid ? { value: '1' } : { value: '0', message: 'ไม่ผ่านเกณฑ์' };
+
+    return [studyRecordResult, afterMidtermResult, finalScoreResult, gradeResult, competencyResult, attitudeResult, readAnalyzeWriteResult, sgsAttitudeResult, sgsReadAnalyzeWriteResult];
+}
