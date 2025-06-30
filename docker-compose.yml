@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  nextjs_app:
+  pp5_form_submit:
     build:
       context: .
       dockerfile: Dockerfile
