@@ -259,7 +259,7 @@ function checkSgsSubject(data: ReportData): CheckResult {
     const s1 = String(excelSubject).trim();
     const s2 = String(sgsSubject).trim();
     const similarity = textSimilarity(s1, s2);
-    if (similarity >= 0.8) {
+    if (similarity >= 0.5) {
         return { value: '1' };
     }
     return { value: '0', message: `ชื่อวิชาไม่ตรงกัน (Excel: ${excelSubject}, SGS: ${sgsSubject})` };
@@ -280,7 +280,7 @@ function checkSgsTeacher(data: ReportData): CheckResult {
     const t1 = normalize(String(excelTeacher));
     const t2 = normalize(String(sgsTeacher));
     const similarity = textSimilarity(t1, t2);
-    if (similarity >= 0.8) {
+    if (similarity >= 0.7) {
         return { value: '1' };
     }
     return { value: '0', message: `ครูผู้สอนไม่ตรงกัน (Excel: ${excelTeacher}, SGS: ${sgsTeacher})` };
