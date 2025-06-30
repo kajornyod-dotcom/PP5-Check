@@ -1,6 +1,6 @@
 import { ReportData } from './pdfTypes'
 
-export type CheckResult = { value: '1' | '0' | '', message?: string }
+export type CheckResult = { value: '1' | '0' | ''; message?: string }
 
 export function checkPreMidtermItems(data: ReportData): CheckResult[] {
     return [
@@ -219,6 +219,71 @@ export function checkMidtermItems(data: ReportData): CheckResult[] {
     return [studyRecordResult, beforeMidtermResult, midtermResult];
 }
 
+// ตรวจสอบว่าข้อมูลรายวิชาจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
+function checkSgsSubject(data: ReportData): CheckResult {
+    if (!data.geminiOcrResult.hasData) {
+        return { value: '', message: 'ไม่มีข้อมูล SGS' };
+    }
+    const excelSubject = data.excelData.data?.home_subject;
+    const sgsSubject = data.geminiOcrResult.data?.course_name;
+    if (!excelSubject || !sgsSubject) {
+        return { value: '0', message: 'ไม่มีข้อมูลชื่อวิชาในไฟล์ใดไฟล์หนึ่ง' };
+    }
+    // เปรียบเทียบโดยไม่สนใจช่องว่างนำหน้า/ตามหลัง
+    if (String(excelSubject).trim() === String(sgsSubject).trim()) {
+        return { value: '1' };
+    }
+    return { value: '0', message: `ชื่อวิชาไม่ตรงกัน (Excel: ${excelSubject}, SGS: ${sgsSubject})` };
+}
+
+// ตรวจสอบว่าข้อมูลรหัสวิชาจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
+function checkSgsSubjectCode(data: ReportData): CheckResult {
+    if (!data.geminiOcrResult.hasData) {
+        return { value: '', message: 'ไม่มีข้อมูล SGS' };
+    }
+    const excelCode = data.excelData.data?.home_subject_code;
+    const sgsCode = data.geminiOcrResult.data?.course_id;
+    if (!excelCode || !sgsCode) {
+        return { value: '0', message: 'ไม่มีข้อมูลรหัสวิชาในไฟล์ใดไฟล์หนึ่ง' };
+    }
+    if (String(excelCode).trim() === String(sgsCode).trim()) {
+        return { value: '1' };
+    }
+    return { value: '0', message: `รหัสวิชาไม่ตรงกัน (Excel: ${excelCode}, SGS: ${sgsCode})` };
+}
+
+// ตรวจสอบว่าข้อมูลครูผู้สอนจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
+function checkSgsTeacher(data: ReportData): CheckResult {
+    if (!data.geminiOcrResult.hasData) {
+        return { value: '', message: 'ไม่มีข้อมูล SGS' };
+    }
+    const excelTeacher = data.excelData.data?.home_teacher;
+    const sgsTeacher = data.geminiOcrResult.data?.teacher;
+    if (!excelTeacher || !sgsTeacher) {
+        return { value: '0', message: 'ไม่มีข้อมูลครูผู้สอนในไฟล์ใดไฟล์หนึ่ง' };
+    }
+    // เปรียบเทียบโดยไม่สนใจคำนำหน้าชื่อและช่องว่าง
+    const normalize = (name: string) => name.replace(/^(นาย|นาง|นางสาว)\s*/, '').trim();
+    if (normalize(String(excelTeacher)) === normalize(String(sgsTeacher))) {
+        return { value: '1' };
+    }
+    return { value: '0', message: `ครูผู้สอนไม่ตรงกัน (Excel: ${excelTeacher}, SGS: ${sgsTeacher})` };
+}
+
+// Helper function for creating SGS check results
+function createSgsCheckResult(
+    geminiOcrResult: ReportData['geminiOcrResult'],
+    key: 'attitude_valid' | 'read_analyze_write_valid',
+    failMessage: string = 'ไม่ผ่านเกณฑ์'
+): CheckResult {
+    if (!geminiOcrResult.hasData) {
+        return { value: '', message: 'ไม่มีข้อมูล SGS' };
+    }
+    return geminiOcrResult.data?.[key]
+        ? { value: '1' }
+        : { value: '0', message: failMessage };
+}
+
 // ตรวจสอบข้อมูลปลายภาค
 export function checkFinalItems(data: ReportData): CheckResult[] {
     const d = data.excelData.data;
@@ -244,25 +309,32 @@ export function checkFinalItems(data: ReportData): CheckResult[] {
         : { value: '0', message: 'กรุณาตรวจสอบการให้ระดับผลการเรียน' };
 
     // 5. คะแนนสมรรถนะ (07)
-    const competencyResult: CheckResult = d?.['07_competency_percent_valid']
+    const competencyResult: CheckResult = d?.['07_performance_count_percent']
         ? { value: '1' }
         : { value: '0', message: 'กรุณากรอกคะแนนสมรรถนะให้ครบถ้วน' };
 
     // 6. คะแนนคุณลักษณะอันพึงประสงค์ (08)
-    const attitudeResult: CheckResult = d?.['08_attitude_count_percent_valid']
+    const attitudeResult: CheckResult = d?.['08_attitude_count_percent']
         ? { value: '1' }
         : { value: '0', message: 'กรุณากรอกคะแนนคุณลักษณะฯ ให้ครบถ้วน' };
 
     // 7. คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)
-    const readAnalyzeWriteResult: CheckResult = d?.['09_read_analyze_write_percent_valid']
+    const readAnalyzeWriteResult: CheckResult = d?.['09_performance_count_percent']
         ? { value: '1' }
         : { value: '0', message: 'กรุณากรอกคะแนนการอ่านฯ ให้ครบถ้วน' };
 
-    // 8. สรุปผลการประเมินคุณลักษณะอันพึงประสงค์ (ปพ.5 SGS)
-    const sgsAttitudeResult: CheckResult = !data.geminiOcrResult.hasData ? { value: '', message: 'ไม่มีข้อมูล SGS' } : data.geminiOcrResult.data?.attitude_valid ? { value: '1' } : { value: '0', message: 'ไม่ผ่านเกณฑ์' };
-
-    // 9. สรุปการประเมินการอ่าน คิด วิเคราะห์ และเขียน (ปพ.5 SGS)
-    const sgsReadAnalyzeWriteResult: CheckResult = !data.geminiOcrResult.hasData ? { value: '', message: 'ไม่มีข้อมูล SGS' } : data.geminiOcrResult.data?.read_analyze_write_valid ? { value: '1' } : { value: '0', message: 'ไม่ผ่านเกณฑ์' };
-
-    return [studyRecordResult, afterMidtermResult, finalScoreResult, gradeResult, competencyResult, attitudeResult, readAnalyzeWriteResult, sgsAttitudeResult, sgsReadAnalyzeWriteResult];
+    return [
+        studyRecordResult,
+        afterMidtermResult,
+        finalScoreResult,
+        gradeResult,
+        competencyResult,
+        attitudeResult,
+        readAnalyzeWriteResult,
+        checkSgsSubject(data),
+        checkSgsSubjectCode(data),
+        checkSgsTeacher(data),
+        createSgsCheckResult(data.geminiOcrResult, 'attitude_valid'),
+        createSgsCheckResult(data.geminiOcrResult, 'read_analyze_write_valid')
+    ];
 }
