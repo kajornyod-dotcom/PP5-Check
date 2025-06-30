@@ -205,16 +205,26 @@ export function checkMidtermItems(data: ReportData): CheckResult[] {
         : { value: '0', message: 'กรุณาบันทึกเวลาเรียนให้ครบจำนวน 10 สัปดาห์' };
 
     // 2. คะแนนก่อนกลาง (04)
-    const hasBeforeMidterm = !!d?.['06_before_midterm_percent_valid'];
-    const beforeMidtermResult: CheckResult = hasBeforeMidterm
-        ? { value: '1' }
-        : { value: '0', message: 'กรุณากรอกคะแนนก่อนกลางภาคให้ครบถ้วน' };
+    const beforeMidtermResult: CheckResult = (() => {
+        if (!d?.['06_before_midterm_percent_valid']) {
+            return { value: '0', message: 'กรุณากรอกคะแนนก่อนกลางภาคให้ครบถ้วน' };
+        }
+        if (d?.['06_compare_before_midterm_with_total_before_midterm'] === false) {
+            return { value: '0', message: 'คะแนนก่อนกลางภาคมีบางคนกรอกเกินคะแนนเต็ม' };
+        }
+        return { value: '1' };
+    })();
 
     // 3. คะแนนกลางภาค (04)
-    const hasMidterm = !!d?.['06_midterm_percent_valid'];
-    const midtermResult: CheckResult = hasMidterm
-        ? { value: '1' }
-        : { value: '0', message: 'กรุณากรอกคะแนนกลางภาคให้ครบถ้วน' };
+    const midtermResult: CheckResult = (() => {
+        if (!d?.['06_midterm_percent_valid']) {
+            return { value: '0', message: 'กรุณากรอกคะแนนกลางภาคให้ครบถ้วน' };
+        }
+        if (d?.['06_compare_midterm_with_total_midterm'] === false) {
+            return { value: '0', message: 'คะแนนกลางภาคมีบางคนกรอกเกินคะแนนเต็ม' };
+        }
+        return { value: '1' };
+    })();
 
     return [studyRecordResult, beforeMidtermResult, midtermResult];
 }
@@ -310,14 +320,26 @@ export function checkFinalItems(data: ReportData): CheckResult[] {
         : { value: '0', message: 'กรุณาบันทึกเวลาเรียนหลังกลางภาคให้ครบ' };
 
     // 2. คะแนนหลังกลางภาค (05)
-    const afterMidtermResult: CheckResult = d?.['06_after_midterm_percent_valid']
-        ? { value: '1' }
-        : { value: '0', message: 'กรุณากรอกคะแนนหลังกลางภาคให้ครบถ้วน' };
+    const afterMidtermResult: CheckResult = (() => {
+        if (!d?.['06_after_midterm_percent_valid']) {
+            return { value: '0', message: 'กรุณากรอกคะแนนหลังกลางภาคให้ครบถ้วน' };
+        }
+        if (d?.['06_compare_after_midterm_with_total_after_midterm'] === false) {
+            return { value: '0', message: 'คะแนนหลังกลางภาคมีบางคนกรอกเกินคะแนนเต็ม' };
+        }
+        return { value: '1' };
+    })();
 
     // 3. คะแนนสอบปลายภาค (05)
-    const finalScoreResult: CheckResult = d?.['06_final_percent_valid']
-        ? { value: '1' }
-        : { value: '0', message: 'กรุณากรอกคะแนนปลายภาคให้ครบถ้วน' };
+    const finalScoreResult: CheckResult = (() => {
+        if (!d?.['06_final_percent_valid']) {
+            return { value: '0', message: 'กรุณากรอกคะแนนปลายภาคให้ครบถ้วน' };
+        }
+        if (d?.['06_compare_final_with_total_final'] === false) {
+            return { value: '0', message: 'คะแนนปลายภาคมีบางคนกรอกเกินคะแนนเต็ม' };
+        }
+        return { value: '1' };
+    })();
 
     // 4. ตรวจสอบการให้ระดับผลการเรียน (06)
     const gradeResult: CheckResult = d?.['06_grade_percent_valid']
