@@ -675,4 +675,7 @@ const loadIcons = async () => {
 };
 
 // เรียกใช้ฟังก์ชันโหลดไอคอนเมื่อโมดูลโหลด
-loadIcons();
+// ตรวจสอบให้แน่ใจว่ารันเฉพาะในฝั่ง client (browser)
+if (typeof window !== 'undefined') {
+    loadIcons();
+}
