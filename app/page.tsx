@@ -519,7 +519,7 @@ export default function Home() {
                             <div className="text-slate-600">
                               <div className="inline-flex items-center justify-center w-10 h-10 bg-slate-100 rounded-full mb-2">
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                                 </svg>
                               </div>
                               <p className="font-medium text-sm mb-1">ลากไฟล์ Excel</p>
@@ -745,6 +745,21 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
+                {/* ตัวอย่างไฟล์ Excel */}
+                <div className="mt-6">
+                  <a
+                    href="/ปพ.5_1_2568_ตัวอย่าง.xlsx"
+                    download
+                    className="inline-flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition"
+                  >
+                    {/* ไอคอนดาวน์โหลด (ลูกศรลง + ก้อนเมฆ) */}
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    ดาวน์โหลดไฟล์ Excel ตัวอย่าง
+                  </a>
+                </div>
               </div>
             </div>
           </div>
