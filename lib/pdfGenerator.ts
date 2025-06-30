@@ -195,7 +195,7 @@ const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
             pdf.setFontSize(5);
             const textY = qrY + qrSize + 3;
             const centerX = qrX + qrSize / 2;
-            pdf.text("🔎 verify me", centerX, textY, { align: "center" });
+            pdf.text("verify me", centerX, textY, { align: "center" });
         }
     } catch (qrError) {
         console.warn("⚠️ ไม่สามารถสร้าง QR Code ได้:", qrError);
