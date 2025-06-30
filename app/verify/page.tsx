@@ -168,6 +168,38 @@ export default function VerifyPage() {
                 {error && <div className="mt-4 text-red-600 text-center">{error}</div>}
                 {result && validateReportData(result.backendResponse) ? (
                     <div className="mt-6">
+                        {/* ส่วนหัวรายงานเหมือน PDF */}
+                        <div className="border border-slate-400 rounded mb-6">
+                            <div className="flex flex-col md:flex-row">
+                                <div className="flex items-center justify-center md:w-1/5 p-4 border-b md:border-b-0 md:border-r border-slate-400 bg-white">
+                                    <img src="/logo-ppk-512x512-1.png" alt="logo" className="h-24 w-24 object-contain" />
+                                </div>
+                                <div className="flex-1 p-4">
+                                    <div className="text-xl font-bold text-center mb-2">รายงานสรุปผลการตรวจสอบ ปพ.5</div>
+                                    <div className="text-center text-base mb-2">
+                                        ปีการศึกษา {result.backendResponse.formData?.academicYear || "-"} ภาคเรียนที่ {result.backendResponse.formData?.semester || "-"}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 justify-between text-base">
+                                        <span>วิชา {result.backendResponse.excelData?.data?.home_subject_code || "-"} {result.backendResponse.excelData?.data?.home_subject || "-"}</span>
+                                        <span>{result.backendResponse.excelData?.data?.home_study_time || "-"} ชั่วโมง/สัปดาห์</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 justify-between text-base mt-1">
+                                        <span>ผู้สอน {result.backendResponse.excelData?.data?.home_teacher || "-"}</span>
+                                        <span>{result.backendResponse.excelData?.data?.home_credit || "-"} หน่วยกิต</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* รายการไฟล์ Excel */}
+                            <div className="p-4 border-t border-slate-400 bg-slate-50">
+                                <div className="font-bold mb-1">รายการไฟล์ Excel:</div>
+                                <ol className="list-decimal ml-6">
+                                    <li>ชื่อไฟล์: {result.backendResponse.excelData?.fileName || "-"}</li>
+                                    <li>ขนาดไฟล์: {result.backendResponse.excelData?.fileSize ? (result.backendResponse.excelData.fileSize / 1024 / 1024).toFixed(2) + " MB" : "-"}</li>
+                                    <li>อัปโหลดเมื่อ: {result.backendResponse.excelData?.uploadedAt ? new Date(result.backendResponse.excelData.uploadedAt).toLocaleString("th-TH") : "-"}</li>
+                                </ol>
+                            </div>
+                        </div>
+                        {/* ตารางตรวจสอบ */}
                         <ResultTable
                             title="รายการตรวจก่อนกลางภาค"
                             headers={["ลำดับที่", "รายการ", "ผลการตรวจ", "หมายเหตุ"]}
