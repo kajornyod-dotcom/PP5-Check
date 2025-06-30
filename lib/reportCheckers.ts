@@ -159,10 +159,16 @@ function checkKPA(data: ReportData): CheckResult {
     return { value: '1' }
 }
 
-// ตรวจสอบว่ามีข้อมูลเวลาเรียนรวมและหน่วยกิตหรือไม่ (ต้องเป็นตัวเลขทั้งคู่)
+// ตรวจสอบว่าเวลาเรียนรวม (03_total_hour) ต้องเป็น 20 เท่าของหน่วยกิต (home_credit) และทั้งคู่ต้องเป็นตัวเลข
 function checkHourCredit(data: ReportData): CheckResult {
-    const d = data.excelData.data
-    return (typeof d?.['03_total_hour'] === 'number' && typeof d?.home_credit === 'number') ? { value: '1' } : { value: '0', message: 'เวลาเรียนรวมและหน่วยกิตต้องเป็นตัวเลข' }
+    const d = data.excelData.data;
+    if (typeof d?.['03_total_hour'] !== 'number' || typeof d?.home_credit !== 'number') {
+        return { value: '0', message: 'เวลาเรียนรวมและหน่วยกิตต้องเป็นตัวเลข' };
+    }
+    if (d['03_total_hour'] !== d.home_credit * 20) {
+        return { value: '0', message: `เวลาเรียนรวม (${d['03_total_hour']}) ต้องเป็น 20 เท่าของหน่วยกิต (${d.home_credit})` };
+    }
+    return { value: '1' }
 }
 
 // ตรวจสอบว่ามีข้อมูลคะแนนเต็มก่อนกลางภาค (06_total_before_modterm, 06_total_midterm, 06_total_after_modterm, 06_total_final, 06_total_score) หรือไม่
