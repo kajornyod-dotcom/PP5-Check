@@ -219,7 +219,34 @@ export function checkMidtermItems(data: ReportData): CheckResult[] {
     return [studyRecordResult, beforeMidtermResult, midtermResult];
 }
 
-// ตรวจสอบว่าข้อมูลรายวิชาจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
+// ฟังก์ชันคำนวณเปอร์เซ็นต์ความเหมือนของข้อความ (Levenshtein similarity)
+function textSimilarity(a: string, b: string): number {
+    const alen = a.length;
+    const blen = b.length;
+    if (alen === 0) return blen === 0 ? 1 : 0;
+    if (blen === 0) return 0;
+
+    const dp: number[] = Array(blen + 1).fill(0);
+    for (let j = 0; j <= blen; j++) dp[j] = j;
+
+    for (let i = 1; i <= alen; i++) {
+        let prev = dp[0];
+        dp[0] = i;
+        for (let j = 1; j <= blen; j++) {
+            const temp = dp[j];
+            if (a[i - 1] === b[j - 1]) {
+                dp[j] = prev;
+            } else {
+                dp[j] = Math.min(prev, dp[j - 1], dp[j]) + 1;
+            }
+            prev = temp;
+        }
+    }
+    const distance = dp[blen];
+    return 1 - distance / Math.max(alen, blen);
+}
+
+// ตรวจสอบว่าข้อมูลรายวิชาจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่ (>=80% ถือว่าเหมือน)
 function checkSgsSubject(data: ReportData): CheckResult {
     if (!data.geminiOcrResult.hasData) {
         return { value: '', message: 'ไม่มีข้อมูล SGS' };
@@ -229,14 +256,16 @@ function checkSgsSubject(data: ReportData): CheckResult {
     if (!excelSubject || !sgsSubject) {
         return { value: '0', message: 'ไม่มีข้อมูลชื่อวิชาในไฟล์ใดไฟล์หนึ่ง' };
     }
-    // เปรียบเทียบโดยไม่สนใจช่องว่างนำหน้า/ตามหลัง
-    if (String(excelSubject).trim() === String(sgsSubject).trim()) {
+    const s1 = String(excelSubject).trim();
+    const s2 = String(sgsSubject).trim();
+    const similarity = textSimilarity(s1, s2);
+    if (similarity >= 0.8) {
         return { value: '1' };
     }
     return { value: '0', message: `ชื่อวิชาไม่ตรงกัน (Excel: ${excelSubject}, SGS: ${sgsSubject})` };
 }
 
-// ตรวจสอบว่าข้อมูลครูผู้สอนจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
+// ตรวจสอบว่าข้อมูลครูผู้สอนจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่ (>=80% ถือว่าเหมือน)
 function checkSgsTeacher(data: ReportData): CheckResult {
     if (!data.geminiOcrResult.hasData) {
         return { value: '', message: 'ไม่มีข้อมูล SGS' };
@@ -248,7 +277,10 @@ function checkSgsTeacher(data: ReportData): CheckResult {
     }
     // เปรียบเทียบโดยไม่สนใจคำนำหน้าชื่อและช่องว่าง
     const normalize = (name: string) => name.replace(/^(นาย|นาง|นางสาว)\s*/, '').trim();
-    if (normalize(String(excelTeacher)) === normalize(String(sgsTeacher))) {
+    const t1 = normalize(String(excelTeacher));
+    const t2 = normalize(String(sgsTeacher));
+    const similarity = textSimilarity(t1, t2);
+    if (similarity >= 0.8) {
         return { value: '1' };
     }
     return { value: '0', message: `ครูผู้สอนไม่ตรงกัน (Excel: ${excelTeacher}, SGS: ${sgsTeacher})` };
