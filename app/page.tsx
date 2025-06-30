@@ -746,6 +746,20 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* ลิงก์ไปยังหน้าตรวจสอบรายงาน */}
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="text-xs text-blue-600 font-medium mb-2">ตรวจสอบรายงาน</div>
+                  <a
+                    href="/verify"
+                    className="inline-flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4m-4-2l4-4m0 0l-4-4m4 4H9" />
+                    </svg>
+                    ไปที่หน้าตรวจสอบรายงาน
+                  </a>
+                </div>
+
                 {/* ตัวอย่างไฟล์ Excel */}
                 <div className="mt-6">
                   <a
