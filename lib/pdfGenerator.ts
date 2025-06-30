@@ -220,6 +220,11 @@ const addQRCodeToAllPages = async (pdf: jsPDF, uuid: string): Promise<void> => {
  */
 export const generatePDF = async (data: ReportData): Promise<void> => {
     try {
+        // โหลดไอคอนก่อนสร้าง PDF
+        if (!correctIconDataURL || !cancelIconDataURL) {
+            await loadIcons();
+        }
+
         const pdf = new jsPDF()
 
         // โหลดและเพิ่มฟอนต์ TH Sarabun
@@ -662,20 +667,9 @@ const renderSignatureSection = (
 let correctIconDataURL: string | null = null;
 let cancelIconDataURL: string | null = null;
 
-// ฟังก์ชันสำหรับโหลดไอคอนเมื่อเริ่มต้น
+// ฟังก์ชันสำหรับโหลดไอคอน
 const loadIcons = async () => {
-    try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-        correctIconDataURL = await loadImageAsBase64(baseUrl + '/correct.png');
-        cancelIconDataURL = await loadImageAsBase64(baseUrl + '/cancel.png');
-        console.log('✅ โหลดไอคอน ถูก/ผิด สำเร็จ');
-    } catch (error) {
-        console.warn('⚠️ ไม่สามารถโหลดไอคอน ถูก/ผิด ได้:', error);
-    }
+    // ใช้ path แบบ relative เพื่อให้ทำงานทั้ง dev/prod
+    correctIconDataURL = await loadImageAsBase64('/correct.png');
+    cancelIconDataURL = await loadImageAsBase64('/cancel.png');
 };
-
-// เรียกใช้ฟังก์ชันโหลดไอคอนเมื่อโมดูลโหลด
-// ตรวจสอบให้แน่ใจว่ารันเฉพาะในฝั่ง client (browser)
-if (typeof window !== 'undefined') {
-    loadIcons();
-}
