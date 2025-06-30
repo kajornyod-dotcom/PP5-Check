@@ -1,13 +1,15 @@
 version: "3.8"
+
 services:
-  web:
-    build: .
+  nextjs_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
-    environment:
-      - NODE_ENV=production
+      - "${PORT}:${PORT}" # ใช้ PORT จาก .env ทั้ง host และ container
     env_file:
-      - .env
+      - .env # Load environment variables from .env file
+    # Optional: Add volumes for persistent data or hot-reloading during development
     # volumes:
     #   - .:/app
-    restart: always
+    #   - /app/node_modules

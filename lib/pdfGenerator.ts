@@ -665,8 +665,9 @@ let cancelIconDataURL: string | null = null;
 // ฟังก์ชันสำหรับโหลดไอคอนเมื่อเริ่มต้น
 const loadIcons = async () => {
     try {
-        correctIconDataURL = await loadImageAsBase64('/correct.png');
-        cancelIconDataURL = await loadImageAsBase64('/cancel.png');
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+        correctIconDataURL = await loadImageAsBase64(baseUrl + '/correct.png');
+        cancelIconDataURL = await loadImageAsBase64(baseUrl + '/cancel.png');
         console.log('✅ โหลดไอคอน ถูก/ผิด สำเร็จ');
     } catch (error) {
         console.warn('⚠️ ไม่สามารถโหลดไอคอน ถูก/ผิด ได้:', error);
