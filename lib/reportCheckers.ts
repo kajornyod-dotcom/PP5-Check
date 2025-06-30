@@ -236,22 +236,6 @@ function checkSgsSubject(data: ReportData): CheckResult {
     return { value: '0', message: `ชื่อวิชาไม่ตรงกัน (Excel: ${excelSubject}, SGS: ${sgsSubject})` };
 }
 
-// ตรวจสอบว่าข้อมูลรหัสวิชาจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
-function checkSgsSubjectCode(data: ReportData): CheckResult {
-    if (!data.geminiOcrResult.hasData) {
-        return { value: '', message: 'ไม่มีข้อมูล SGS' };
-    }
-    const excelCode = data.excelData.data?.home_subject_code;
-    const sgsCode = data.geminiOcrResult.data?.course_id;
-    if (!excelCode || !sgsCode) {
-        return { value: '0', message: 'ไม่มีข้อมูลรหัสวิชาในไฟล์ใดไฟล์หนึ่ง' };
-    }
-    if (String(excelCode).trim() === String(sgsCode).trim()) {
-        return { value: '1' };
-    }
-    return { value: '0', message: `รหัสวิชาไม่ตรงกัน (Excel: ${excelCode}, SGS: ${sgsCode})` };
-}
-
 // ตรวจสอบว่าข้อมูลครูผู้สอนจาก Excel ตรงกับข้อมูลจาก SGS PDF หรือไม่
 function checkSgsTeacher(data: ReportData): CheckResult {
     if (!data.geminiOcrResult.hasData) {
@@ -332,7 +316,6 @@ export function checkFinalItems(data: ReportData): CheckResult[] {
         attitudeResult,
         readAnalyzeWriteResult,
         checkSgsSubject(data),
-        checkSgsSubjectCode(data),
         checkSgsTeacher(data),
         createSgsCheckResult(data.geminiOcrResult, 'attitude_valid'),
         createSgsCheckResult(data.geminiOcrResult, 'read_analyze_write_valid')
