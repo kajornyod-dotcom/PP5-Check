@@ -325,17 +325,17 @@ export function checkFinalItems(data: ReportData): CheckResult[] {
         : { value: '0', message: 'กรุณาตรวจสอบการให้ระดับผลการเรียน' };
 
     // 5. คะแนนสมรรถนะ (07)
-    const competencyResult: CheckResult = d?.['07_performance_count_percent']
+    const competencyResult: CheckResult = d?.['07_competency_percent_valid']
         ? { value: '1' }
         : { value: '0', message: 'กรุณากรอกคะแนนสมรรถนะให้ครบถ้วน' };
 
     // 6. คะแนนคุณลักษณะอันพึงประสงค์ (08)
-    const attitudeResult: CheckResult = d?.['08_attitude_count_percent']
+    const attitudeResult: CheckResult = d?.['08_attitude_count_percent_valid']
         ? { value: '1' }
         : { value: '0', message: 'กรุณากรอกคะแนนคุณลักษณะฯ ให้ครบถ้วน' };
 
     // 7. คะแนนการอ่าน คิดวิเคราะห์และเขียน (09)
-    const readAnalyzeWriteResult: CheckResult = d?.['09_performance_count_percent']
+    const readAnalyzeWriteResult: CheckResult = d?.['09_read_analyze_write_percent_valid']
         ? { value: '1' }
         : { value: '0', message: 'กรุณากรอกคะแนนการอ่านฯ ให้ครบถ้วน' };
 
