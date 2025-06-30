@@ -610,11 +610,11 @@ const drawTable = (
     return startY + tableHeight + 10
 }
 
-// ========== Object เก็บชื่อผู้ลงนาม (dummy) ========== //
+// ========== Object เก็บชื่อผู้ลงนาม (ดึงจาก Environment Variables) ========== //
 const signatureNames = {
-    registrar: 'นายสมชาย ใจดี',
-    academicHead: 'นางสาวพรทิพย์ เก่งงาน',
-    director: 'นายประเสริฐ ผู้อำนวยการ'
+    registrar: process.env.NEXT_PUBLIC_SIGNATURE_REGISTRAR_NAME || 'นายทะเบียน (ยังไม่ได้ตั้งค่า)',
+    academicHead: process.env.NEXT_PUBLIC_SIGNATURE_ACADEMIC_HEAD_NAME || 'หัวหน้าวิชาการ (ยังไม่ได้ตั้งค่า)',
+    director: process.env.NEXT_PUBLIC_SIGNATURE_DIRECTOR_NAME || 'ผู้อำนวยการ (ยังไม่ได้ตั้งค่า)'
 }
 
 /**
