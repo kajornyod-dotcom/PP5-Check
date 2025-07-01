@@ -211,17 +211,35 @@ export default function VerifyClient() {
                         ) : "ตรวจสอบ"}
                     </button>
                 </form>
+
+                {/* Initial welcome message */}
+                {!uuid && !result && !loading && !error && (
+                    <div className="mt-6 text-center text-gray-600">
+                        <p>กรุณากรอก UUID ของรายงาน หรือใช้ปุ่มสแกน QR Code เพื่อเริ่มการตรวจสอบ</p>
+                        <p className="mt-2 text-sm text-gray-500">UUID สามารถพบได้ในรายงาน ปพ.5 ที่สร้างขึ้น</p>
+                    </div>
+                )}
+
                 {/* Error message with ARIA live region */}
                 {error && (
                     <div
                         ref={errorRef}
-                        className="mt-4 text-red-600 text-center font-semibold"
+                        className="mt-4 text-red-700 bg-red-100 p-3 rounded text-center font-semibold" // Added bg-red-100, p-3, rounded
                         tabIndex={-1}
                         aria-live="assertive"
                     >
                         {error}
                     </div>
                 )}
+
+                {/* Loading indicator */}
+                {loading && !result && !error && (
+                    <div className="mt-6 text-center text-blue-600 flex items-center justify-center">
+                        <ImSpinner2 className="animate-spin mr-2" size={24} aria-hidden="true" />
+                        กำลังตรวจสอบข้อมูล...
+                    </div>
+                )}
+
                 {/* QR Scanner Modal (optional, placeholder for integration) */}
                 {showScanner && (
                     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -240,6 +258,28 @@ export default function VerifyClient() {
                 )}
                 {result && validateReportData(result.backendResponse) ? (
                     <div className="mt-6">
+                        {/* Overall Summary */}
+                        {(() => {
+                            const preMidtermFailed = result.preMidtermResults.filter((r: any) => r.value === false || r.value === "0" || r.value === 0).length;
+                            const midtermFailed = result.midtermResults.filter((r: any) => r.value === false || r.value === "0" || r.value === 0).length;
+                            const finalFailed = result.finalResults.filter((r: any) => r.value === false || r.value === "0" || r.value === 0).length;
+                            const totalFailed = preMidtermFailed + midtermFailed + finalFailed;
+
+                            if (totalFailed === 0) {
+                                return (
+                                    <div className="mb-6 p-3 bg-green-100 text-green-700 font-semibold text-center rounded">
+                                        รายงานนี้ผ่านการตรวจสอบเบื้องต้นทั้งหมด ✅
+                                    </div>
+                                );
+                            } else {
+                                return (
+                                    <div className="mb-6 p-3 bg-yellow-100 text-yellow-700 font-semibold text-center rounded">
+                                        พบรายการที่ตรวจสอบไม่ผ่าน {totalFailed} รายการ กรุณาตรวจสอบรายละเอียดในตารางด้านล่าง ⚠️
+                                    </div>
+                                );
+                            }
+                        })()}
+
                         {/* ส่วนหัวรายงานเหมือน PDF */}
                         <div className="border border-slate-400 rounded mb-6 overflow-x-auto">
                             <div className="flex flex-col md:flex-row">
