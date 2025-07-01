@@ -353,7 +353,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-5 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-blue-50 py-5 px-4 sm:px-6 lg:px-8"> {/* Changed background color */}
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center lg:min-h-[calc(100vh-5rem)]">
           {/* Main Form Section */}
@@ -373,11 +373,12 @@ export default function Home() {
                     />
                   </div>
                 </div>
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                <h1 className="text-3xl font-bold text-indigo-800 mb-2"> {/* Changed text color */}
                   ส่งไฟล์ ปพ.5
                 </h1>
-                <p className="text-slate-600">อัปโหลดไฟล์เพื่อตรวจสอบข้อมูล</p>
-                <div className="w-16 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+                <p className="text-indigo-600">อัปโหลดไฟล์เพื่อตรวจสอบข้อมูล</p> {/* Changed text color */}
+                <div className="w-16 h-1 bg-blue-600 mx-auto mt-2 rounded-full"> {/* Changed background color */}
+                </div>
               </div>
 
               {/* Form Card */}
@@ -751,7 +752,7 @@ export default function Home() {
                   <div className="text-xs text-blue-600 font-medium mb-2">ตรวจสอบรายงาน</div>
                   <a
                     href="/verify"
-                    className="inline-flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition"
+                    className="inline-flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4m-4-2l4-4m0 0l-4-4m4 4H9" />
@@ -765,7 +766,7 @@ export default function Home() {
                   <a
                     href="/ปพ.5_1_2568_ตัวอย่าง.xlsx"
                     download
-                    className="inline-flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition"
+                    className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
                   >
                     {/* ไอคอนดาวน์โหลด (ลูกศรลง + ก้อนเมฆ) */}
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
