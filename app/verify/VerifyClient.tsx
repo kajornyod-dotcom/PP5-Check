@@ -6,6 +6,7 @@ import { validateReportData } from "@/lib/pdfGenerator";
 import { checkPreMidtermItems, checkMidtermItems, checkFinalItems } from "@/lib/reportCheckers";
 import { FaQrcode } from "react-icons/fa";
 import { ImSpinner2 } from "react-icons/im";
+import Link from "next/link";
 
 // ... CheckIcon, CrossIcon, renderResultCell, ResultTable, getPreMidterm, getMidterm, getFinal (copy from page.tsx) ...
 
@@ -175,6 +176,18 @@ export default function VerifyClient() {
     // Responsive input with QR icon
     return (
         <div className="min-h-screen bg-slate-50 py-8 px-2 sm:px-4 flex flex-col items-center">
+            {/* ปุ่มย้อนกลับ */}
+            <div className="absolute top-4 left-4 z-50">
+                <Link
+                    href="/"
+                    className="inline-flex items-center px-3 py-1.5 bg-blue-50 border border-blue-200 rounded shadow hover:bg-blue-100 text-blue-700 font-medium transition"
+                    aria-label="ย้อนกลับไปหน้าแรก"
+                >
+                    <span aria-hidden="true" className="mr-2">←</span>
+                    หน้าแรก
+                </Link>
+            </div>
+
             <div className="max-w-3xl w-full bg-white rounded-lg shadow p-4 sm:p-6">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-center">ตรวจสอบรายงานจาก QR Code</h1>
                 <form onSubmit={handleSubmit} className="space-y-4 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
