@@ -159,14 +159,14 @@ function checkKPA(data: ReportData): CheckResult {
     return { value: '1' }
 }
 
-// ตรวจสอบว่าเวลาเรียนรวม (03_total_hour) ต้องเป็น 20 เท่าของหน่วยกิต (home_credit) และทั้งคู่ต้องเป็นตัวเลข
+// ตรวจสอบว่าเวลาเรียนรวม (03_total_hour) ต้องเป็น 40 เท่าของหน่วยกิต (home_credit) และทั้งคู่ต้องเป็นตัวเลข
 function checkHourCredit(data: ReportData): CheckResult {
     const d = data.excelData.data;
     if (typeof d?.['03_total_hour'] !== 'number' || typeof d?.home_credit !== 'number') {
         return { value: '0', message: 'เวลาเรียนรวมและหน่วยกิตต้องเป็นตัวเลข' };
     }
-    if (d['03_total_hour'] !== d.home_credit * 20) {
-        return { value: '0', message: `เวลาเรียนรวม (${d['03_total_hour']}) ต้องเป็น 20 เท่าของหน่วยกิต (${d.home_credit})` };
+    if (d['03_total_hour'] !== d.home_credit * 40) {
+        return { value: '0', message: `เวลาเรียนรวม (${d['03_total_hour']}) ต้องเป็น 40 เท่าของหน่วยกิต (${d.home_credit})` };
     }
     return { value: '1' }
 }
