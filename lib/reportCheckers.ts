@@ -80,7 +80,7 @@ function checkSubjectCode(data: ReportData): CheckResult {
     const areaMap: Record<string, string> = {
         'ว': 'วิทยาศาสตร์และเทคโนโลยี',
         'ค': 'คณิตศาสตร์',
-        'ส': 'สังคมศึกษา',
+        'ส': 'สังคมศึกษา ศาสนา และวัฒนธรรม',
         'อ': 'ภาษาต่างประเทศ',
         'ท': 'ภาษาไทย',
         'ศ': 'ศิลปะ',
