@@ -18,29 +18,29 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/logo-ppk-512x512-1.png",
+        url: "/public/Gold LOGO WR no EF.png",
         sizes: "512x512",
         type: "image/png",
       },
       {
-        url: "/logo-ppk-512x512-1.png",
+        url: "/public/Gold LOGO WR no EF.png",
         sizes: "32x32",
         type: "image/png",
       },
       {
-        url: "/logo-ppk-512x512-1.png",
+        url: "/public/Gold LOGO WR no EF.png",
         sizes: "16x16",
         type: "image/png",
       },
     ],
     apple: [
       {
-        url: "/logo-ppk-512x512-1.png",
+        url: "/public/Gold LOGO WR no EF.png",
         sizes: "180x180",
         type: "image/png",
       },
     ],
-    shortcut: "/logo-ppk-512x512-1.png",
+    shortcut: "/public/Gold LOGO WR no EF.png",
   },
 };
 
