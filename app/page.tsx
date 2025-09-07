@@ -664,7 +664,7 @@ export default function Home() {
 
               {/* Footer */}
               <div className="text-center mt-5 text-slate-500 text-sm">
-                <p>โรงเรียนโพนงามพิทยานุกูล</p>
+                <p>โรงเรียนวารินชำราบ Warinchamrap School</p>
               </div>
             </div>
           </div>
