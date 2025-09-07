@@ -13,34 +13,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ฟอร์มส่ง ปพ.5 โรงเรียนโพนงามพิทยานุกูล",
+  title: "ฟอร์มส่ง ปพ.5 โรงเรียนวารินชำราบ",
   description: "ระบบส่งไฟล์ ปพ.5 เพื่อตรวจสอบข้อมูล",
   icons: {
     icon: [
       {
-        url: "/public/Gold LOGO WR no EF.png",
+        url: "/Gold LOGO WR no EF.png",
         sizes: "512x512",
         type: "image/png",
       },
       {
-        url: "/public/Gold LOGO WR no EF.png",
+        url: "/Gold LOGO WR no EF.png",
         sizes: "32x32",
         type: "image/png",
       },
       {
-        url: "/public/Gold LOGO WR no EF.png",
+        url: "/Gold LOGO WR no EF.png",
         sizes: "16x16",
         type: "image/png",
       },
     ],
     apple: [
       {
-        url: "/public/Gold LOGO WR no EF.png",
+        url: "/Gold LOGO WR no EF.png",
         sizes: "180x180",
         type: "image/png",
       },
     ],
-    shortcut: "/public/Gold LOGO WR no EF.png",
+    shortcut: "/Gold LOGO WR no EF.png",
   },
 };
 
