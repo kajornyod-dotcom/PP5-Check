@@ -364,8 +364,8 @@ export default function Home() {
                 <div className="flex justify-center mb-3">
                   <div className="p-1.5 bg-white rounded-xl shadow-md">
                     <Image
-                      src="/logo-ppk-512x512-1.png"
-                      alt="PPK Logo"
+                      src="/Gold LOGO WR no EF.png"
+                      alt="LOGO WR"
                       width={50}
                       height={50}
                       priority
